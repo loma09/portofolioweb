@@ -53,6 +53,14 @@ const SKILLS = [
 
 const PROJECTS = [
   {
+    title: "Flutter Ludo Fun",
+    description: "Cross-platform classic Ludo board game built with Flutter & Dart. Runs on Android with smooth animations and engaging multiplayer gameplay.",
+    tags: ["Flutter", "Dart"],
+    mockupBg: "#0a2e1a", accentBar: "#A8FF78",
+    lang: "Dart / Flutter", langColor: "#61DAFB",
+    link: "https://github.com/loma09/Flutter-Ludo-Fun",
+  },
+  {
     title: "Laundry App",
     description: "Full-stack laundry management system built with Laravel & Tailwind CSS. Handles customer transactions, order tracking, and operational workflows with a clean Blade-powered UI.",
     tags: ["Laravel", "Tailwind CSS", "SQL"],
@@ -69,12 +77,28 @@ const PROJECTS = [
     link: "https://github.com/loma09/credit-risk-prediction",
   },
   {
-    title: "Flutter Ludo Fun",
-    description: "Cross-platform classic Ludo board game built with Flutter & Dart. Runs on Android, iOS, Web, Windows, macOS, and Linux with smooth animations and engaging multiplayer gameplay.",
-    tags: ["Flutter", "Dart"],
-    mockupBg: "#0a2e1a", accentBar: "#A8FF78",
-    lang: "Dart / Flutter", langColor: "#61DAFB",
-    link: "https://github.com/loma09/Flutter-Ludo-Fun",
+    title: "Promptlab",
+    description: "A prompt engineering lab built with JavaScript for experimenting and testing AI prompts efficiently.",
+    tags: ["JavaScript"],
+    mockupBg: "#1a1a0a", accentBar: "#F4DF4E",
+    lang: "JavaScript", langColor: "#F4DF4E",
+    link: "https://github.com/loma09/promptlab",
+  },
+  {
+  title: "Microquest",
+  description: "A web development learning platform where users complete coding challenges and get instant feedback from AI as the judge. Built to help beginners practice HTML, CSS, and JavaScript through guided micro-tasks.",
+  tags: ["JavaScript"],
+  mockupBg: "#0a0a2e", accentBar: "#61DAFB",
+  lang: "JavaScript", langColor: "#61DAFB",
+  link: "https://github.com/loma09/microquest",
+  },
+  {
+  title: "PanganTrace AI",
+  description: "Intelligent food supply chain monitoring & fraud detection platform powered by Azure AI. Detects subsidy leakage and price manipulation across Indonesia's national food distribution network.",
+  tags: ["Next.js", "Python", "Laravel"],
+  mockupBg: "#0a1a0a", accentBar: "#A8FF78",
+  lang: "Next.js / FastAPI", langColor: "#38BDF8",
+  link: "https://github.com/loma09/pangantrace-ai",
   },
 ];
 
@@ -96,14 +120,14 @@ const THEMES = {
     toggleBg: "#000000", toggleText: "#F4DF4E",
   },
   dark: {
-    body: "#111111", card: "#1e1e1e", border: "#F4DF4E", text: "#F4DF4E",
-    textMuted: "#aaaaaa", navBg: "#111111", skillsBg: "#0a0a0a",
-    skillsText: "#F4DF4E", projectsBg: "#161616", contactBg: "#1a0808",
-    gameBg: "#0a0a0a",
-    footerBg: "#0a0a0a", footerText: "#F4DF4E",
-    shadow: "rgba(244,223,78,0.7)", shadowHero: "rgba(244,223,78,0.5)",
-    shadowYellow: "rgba(244,223,78,0.6)", inputBg: "#2a2a2a",
-    toggleBg: "#F4DF4E", toggleText: "#000000",
+  body: "#111111", card: "#1e1a14", border: "#c9a84c", text: "#e8dfc0",
+  textMuted: "#a89878", navBg: "#111111", skillsBg: "#0a0a08",
+  skillsText: "#e8dfc0", projectsBg: "#161410", contactBg: "#1a1208",
+  gameBg: "#0a0a08",
+  footerBg: "#0a0a08", footerText: "#e8dfc0",
+  shadow: "rgba(201,168,76,0.7)", shadowHero: "rgba(201,168,76,0.5)",
+  shadowYellow: "rgba(201,168,76,0.6)", inputBg: "#2a2418",
+  toggleBg: "#c9a84c", toggleText: "#000000",
   },
 };
 
@@ -124,14 +148,63 @@ function randomFood(snake) {
 
 function SnakeGame({ t }) {
   const canvasRef = useRef(null);
-  const [status, setStatus] = useState("idle"); // idle | playing | paused | dead
+  const [status, setStatus] = useState("idle");
   const [score, setScore] = useState(0);
   const [highScore, setHighScore] = useState(0);
+  const [bonusActive, setBonusActive] = useState(false);
   const snake = useRef(INIT_SNAKE);
   const dir = useRef(INIT_DIR);
   const nextDir = useRef(INIT_DIR);
   const food = useRef({ x: 15, y: 10 });
   const gameLoop = useRef(null);
+  const bonusFood = useRef(null);
+  const bonusTimer = useRef(null);
+  const scoreRef = useRef(0);
+
+  const playSound = useCallback((type) => {
+    try {
+      const ctx = new (window.AudioContext || window.webkitAudioContext)();
+      const osc = ctx.createOscillator();
+      const gain = ctx.createGain();
+      osc.connect(gain);
+      gain.connect(ctx.destination);
+      if (type === "eat") {
+        osc.type = "square";
+        osc.frequency.setValueAtTime(440, ctx.currentTime);
+        osc.frequency.exponentialRampToValueAtTime(880, ctx.currentTime + 0.1);
+        gain.gain.setValueAtTime(0.3, ctx.currentTime);
+        gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.15);
+        osc.start(ctx.currentTime);
+        osc.stop(ctx.currentTime + 0.15);
+      } else if (type === "die") {
+        osc.type = "sawtooth";
+        osc.frequency.setValueAtTime(300, ctx.currentTime);
+        osc.frequency.exponentialRampToValueAtTime(50, ctx.currentTime + 0.5);
+        gain.gain.setValueAtTime(0.4, ctx.currentTime);
+        gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.5);
+        osc.start(ctx.currentTime);
+        osc.stop(ctx.currentTime + 0.5);
+      } else if (type === "move") {
+        osc.type = "sine";
+        osc.frequency.setValueAtTime(80, ctx.currentTime);
+        gain.gain.setValueAtTime(0.08, ctx.currentTime);
+        gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.04);
+        osc.start(ctx.currentTime);
+        osc.stop(ctx.currentTime + 0.04);
+      }
+      osc.onended = () => ctx.close();
+    } catch (e) {}
+  }, []);
+
+  const spawnBonus = useCallback(() => {
+    if (bonusFood.current) return;
+    bonusFood.current = randomFood([...snake.current, food.current]);
+    setBonusActive(true);
+    bonusTimer.current = setTimeout(() => {
+      bonusFood.current = null;
+      setBonusActive(false);
+    }, 5000);
+  }, []);
 
   const draw = useCallback(() => {
     const canvas = canvasRef.current;
@@ -139,8 +212,6 @@ function SnakeGame({ t }) {
     const ctx = canvas.getContext("2d");
     ctx.fillStyle = "#0a0a0a";
     ctx.fillRect(0, 0, COLS * CELL, ROWS * CELL);
-
-    // grid
     ctx.strokeStyle = "rgba(255,255,255,0.04)";
     ctx.lineWidth = 0.5;
     for (let i = 0; i <= COLS; i++) {
@@ -149,15 +220,23 @@ function SnakeGame({ t }) {
     for (let j = 0; j <= ROWS; j++) {
       ctx.beginPath(); ctx.moveTo(0, j * CELL); ctx.lineTo(COLS * CELL, j * CELL); ctx.stroke();
     }
-
-    // food
     ctx.fillStyle = "#FF6B6B";
     ctx.strokeStyle = "#000";
     ctx.lineWidth = 2;
     ctx.fillRect(food.current.x * CELL + 2, food.current.y * CELL + 2, CELL - 4, CELL - 4);
     ctx.strokeRect(food.current.x * CELL + 2, food.current.y * CELL + 2, CELL - 4, CELL - 4);
-
-    // snake
+    if (bonusFood.current) {
+      ctx.fillStyle = "#FFD700";
+      ctx.strokeStyle = "#FF6B6B";
+      ctx.lineWidth = 3;
+      ctx.fillRect(bonusFood.current.x * CELL, bonusFood.current.y * CELL, CELL, CELL);
+      ctx.strokeRect(bonusFood.current.x * CELL, bonusFood.current.y * CELL, CELL, CELL);
+      ctx.fillStyle = "#000";
+      ctx.font = `bold ${CELL - 6}px monospace`;
+      ctx.textAlign = "center";
+      ctx.textBaseline = "middle";
+      ctx.fillText("★", bonusFood.current.x * CELL + CELL / 2, bonusFood.current.y * CELL + CELL / 2);
+    }
     snake.current.forEach((seg, i) => {
       ctx.fillStyle = i === 0 ? "#F4DF4E" : "#A8FF78";
       ctx.strokeStyle = "#000";
@@ -173,29 +252,49 @@ function SnakeGame({ t }) {
       x: (snake.current[0].x + dir.current.x + COLS) % COLS,
       y: (snake.current[0].y + dir.current.y + ROWS) % ROWS,
     };
-    // self collision
     if (snake.current.some(s => s.x === head.x && s.y === head.y)) {
       setStatus("dead");
-      setHighScore(prev => Math.max(prev, score));
+      setHighScore(prev => Math.max(prev, scoreRef.current));
       clearInterval(gameLoop.current);
+      playSound("die");
       return;
     }
     const ate = head.x === food.current.x && head.y === food.current.y;
+    const ateBonus = bonusFood.current && head.x === bonusFood.current.x && head.y === bonusFood.current.y;
     const newSnake = [head, ...snake.current];
-    if (!ate) newSnake.pop();
-    else {
-      food.current = randomFood(newSnake);
-      setScore(s => s + 10);
+    if (!ate && !ateBonus) {
+      newSnake.pop();
+      playSound("move");
+    } else {
+      if (ate) {
+        food.current = randomFood(newSnake);
+        scoreRef.current += 10;
+        setScore(scoreRef.current);
+        if (scoreRef.current % 30 === 0) spawnBonus();
+        playSound("eat");
+      }
+      if (ateBonus) {
+        bonusFood.current = null;
+        setBonusActive(false);
+        clearTimeout(bonusTimer.current);
+        scoreRef.current += 50;
+        setScore(scoreRef.current);
+        playSound("eat");
+      }
     }
     snake.current = newSnake;
     draw();
-  }, [draw, score]);
+  }, [draw, spawnBonus, playSound]);
 
   const startGame = useCallback(() => {
     snake.current = [{ x: 10, y: 10 }];
     dir.current = { x: 1, y: 0 };
     nextDir.current = { x: 1, y: 0 };
     food.current = randomFood(snake.current);
+    bonusFood.current = null;
+    setBonusActive(false);
+    clearTimeout(bonusTimer.current);
+    scoreRef.current = 0;
     setScore(0);
     setStatus("playing");
     clearInterval(gameLoop.current);
@@ -232,10 +331,10 @@ function SnakeGame({ t }) {
       }
       if (status !== "playing") return;
       const map = {
-        ArrowUp:    { x: 0, y: -1 }, w: { x: 0, y: -1 },
-        ArrowDown:  { x: 0, y: 1 },  s: { x: 0, y: 1 },
-        ArrowLeft:  { x: -1, y: 0 }, a: { x: -1, y: 0 },
-        ArrowRight: { x: 1, y: 0 },  d: { x: 1, y: 0 },
+        ArrowUp: { x: 0, y: -1 }, w: { x: 0, y: -1 },
+        ArrowDown: { x: 0, y: 1 }, s: { x: 0, y: 1 },
+        ArrowLeft: { x: -1, y: 0 }, a: { x: -1, y: 0 },
+        ArrowRight: { x: 1, y: 0 }, d: { x: 1, y: 0 },
       };
       const d = map[e.key];
       if (d && !(d.x === -dir.current.x && d.y === -dir.current.y)) {
@@ -246,7 +345,6 @@ function SnakeGame({ t }) {
     return () => window.removeEventListener("keydown", handleKey);
   }, [status]);
 
-  // Mobile swipe
   const touchStart = useRef(null);
   const handleTouchStart = (e) => { touchStart.current = e.touches[0]; };
   const handleTouchEnd = (e) => {
@@ -275,10 +373,8 @@ function SnakeGame({ t }) {
             </h2>
           </div>
         </Reveal>
-
         <Reveal direction="up" delay={100}>
           <div className="flex flex-col lg:flex-row gap-8 items-start">
-            {/* Canvas */}
             <div style={{ border: "4px solid #F4DF4E", boxShadow: "8px 8px 0 0 rgba(244,223,78,0.5)", position: "relative" }}>
               <canvas
                 ref={canvasRef}
@@ -288,7 +384,6 @@ function SnakeGame({ t }) {
                 onTouchEnd={handleTouchEnd}
                 style={{ display: "block" }}
               />
-              {/* Overlay for idle/dead/paused */}
               {status !== "playing" && (
                 <div style={{ position: "absolute", inset: 0, background: "rgba(0,0,0,0.85)", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: "16px" }}>
                   {status === "dead" && (
@@ -314,10 +409,7 @@ function SnakeGame({ t }) {
                 </div>
               )}
             </div>
-
-            {/* Controls panel */}
             <div className="flex flex-col gap-4" style={{ minWidth: "200px" }}>
-              {/* Score */}
               <div style={{ background: "#1e1e1e", border: "4px solid #F4DF4E", boxShadow: "6px 6px 0 0 rgba(244,223,78,0.5)", padding: "20px" }}>
                 <p className="font-black text-xs uppercase tracking-widest mb-1" style={{ color: "#aaa" }}>Score</p>
                 <p className="font-black text-4xl" style={{ color: "#F4DF4E" }}>{score}</p>
@@ -326,28 +418,22 @@ function SnakeGame({ t }) {
                 <p className="font-black text-xs uppercase tracking-widest mb-1" style={{ color: "#aaa" }}>Best</p>
                 <p className="font-black text-4xl" style={{ color: "#FF6B6B" }}>{highScore}</p>
               </div>
-
-              {/* Buttons */}
+              {bonusActive && (
+                <div style={{ background: "#FFD700", border: "4px solid #000", boxShadow: "4px 4px 0 0 #FF6B6B", padding: "12px" }} className="text-center">
+                  <p className="font-black text-xs uppercase tracking-widest" style={{ color: "#000" }}>★ BONUS +50</p>
+                  <p className="font-black text-xs" style={{ color: "#000" }}>Grab it fast!</p>
+                </div>
+              )}
               {status === "playing" && (
-                <button
-                  onClick={togglePause}
-                  style={{ background: "#F4DF4E", color: "#000", border: "4px solid #F4DF4E", boxShadow: "4px 4px 0 0 rgba(244,223,78,0.5)" }}
-                  className="font-black uppercase tracking-widest text-sm px-6 py-3 cursor-pointer"
-                >
+                <button onClick={togglePause} style={{ background: "#F4DF4E", color: "#000", border: "4px solid #F4DF4E", boxShadow: "4px 4px 0 0 rgba(244,223,78,0.5)" }} className="font-black uppercase tracking-widest text-sm px-6 py-3 cursor-pointer">
                   ⏸ PAUSE
                 </button>
               )}
               {status === "paused" && (
-                <button
-                  onClick={togglePause}
-                  style={{ background: "#A8FF78", color: "#000", border: "4px solid #A8FF78", boxShadow: "4px 4px 0 0 rgba(168,255,120,0.5)" }}
-                  className="font-black uppercase tracking-widest text-sm px-6 py-3 cursor-pointer"
-                >
+                <button onClick={togglePause} style={{ background: "#A8FF78", color: "#000", border: "4px solid #A8FF78", boxShadow: "4px 4px 0 0 rgba(168,255,120,0.5)" }} className="font-black uppercase tracking-widest text-sm px-6 py-3 cursor-pointer">
                   ▶ RESUME
                 </button>
               )}
-
-              {/* Controls legend */}
               <div style={{ border: "4px solid rgba(244,223,78,0.3)", padding: "16px" }}>
                 <p className="font-black text-xs uppercase tracking-widest mb-3" style={{ color: "#F4DF4E" }}>Controls</p>
                 {[
@@ -361,7 +447,8 @@ function SnakeGame({ t }) {
                     <span className="font-bold text-xs" style={{ color: "#aaa" }}>{k.label}</span>
                   </div>
                 ))}
-                <p className="font-bold text-xs mt-2" style={{ color: "#555" }}>Swipe on mobile</p>
+                <p className="font-bold text-xs mt-2" style={{ color: "#aaa" }}>★ Bonus tiap 30 poin</p>
+                <p className="font-bold text-xs mt-1" style={{ color: "#555" }}>Swipe on mobile</p>
               </div>
             </div>
           </div>
@@ -480,28 +567,28 @@ function HeroSection({ t }) {
               </p>
             </Reveal>
             <Reveal direction="up" delay={400}>
-              <div className="flex flex-col sm:flex-row gap-4">
+              <div className="flex flex-wrap gap-4 items-start">
                 <button
                   onClick={() => document.getElementById("contact").scrollIntoView({ behavior: "smooth" })}
                   style={{ background: t.text, color: t.body, border: `4px solid ${t.border}`, boxShadow: `8px 8px 0 0 ${t.shadowHero}`, transition: "all 0.4s ease" }}
                   onMouseEnter={e => { e.currentTarget.style.transform = "translate(4px,4px)"; e.currentTarget.style.boxShadow = `4px 4px 0 0 ${t.shadowHero}`; }}
                   onMouseLeave={e => { e.currentTarget.style.transform = "none"; e.currentTarget.style.boxShadow = `8px 8px 0 0 ${t.shadowHero}`; }}
-                  className="font-black uppercase tracking-widest text-base px-8 py-4 cursor-pointer">
+                  className="font-black uppercase tracking-widest text-base px-8 py-4 cursor-pointer whitespace-nowrap">
                   Hire Me →
                 </button>
-                <div className="flex gap-4">
+                <div className="flex flex-wrap gap-4 items-start">
                   <a href="/CV_Ahmad_Ikdinal.pdf" download="CV_Ahmad_Ikdinal.pdf"
                     style={{ background: "#A8FF78", color: "#000", border: `4px solid ${t.border}`, boxShadow: `8px 8px 0 0 ${t.shadow}`, transition: "all 0.4s ease" }}
                     onMouseEnter={e => { e.currentTarget.style.transform = "translate(4px,4px)"; e.currentTarget.style.boxShadow = `4px 4px 0 0 ${t.shadow}`; }}
                     onMouseLeave={e => { e.currentTarget.style.transform = "none"; e.currentTarget.style.boxShadow = `8px 8px 0 0 ${t.shadow}`; }}
-                    className="font-black uppercase tracking-widest text-base px-8 py-4 cursor-pointer flex items-center gap-2">
+                    className="font-black uppercase tracking-widest text-base px-8 py-4 cursor-pointer flex items-center gap-2 whitespace-nowrap">
                     ↓ Download CV
                   </a>
                   <a href="https://github.com/loma09" target="_blank" rel="noopener noreferrer"
                     style={{ background: t.body, color: t.text, border: `4px solid ${t.border}`, boxShadow: `8px 8px 0 0 ${t.shadow}`, transition: "all 0.4s ease" }}
                     onMouseEnter={e => { e.currentTarget.style.transform = "translate(4px,4px)"; e.currentTarget.style.boxShadow = `4px 4px 0 0 ${t.shadow}`; }}
                     onMouseLeave={e => { e.currentTarget.style.transform = "none"; e.currentTarget.style.boxShadow = `8px 8px 0 0 ${t.shadow}`; }}
-                    className="font-black uppercase tracking-widest text-base px-8 py-4 cursor-pointer flex items-center gap-2">
+                    className="font-black uppercase tracking-widest text-base px-8 py-4 cursor-pointer flex items-center gap-2 whitespace-nowrap">
                     <img src="https://cdn.jsdelivr.net/gh/devicons/devicon/icons/github/github-original.svg" alt="GitHub" className="w-5 h-5" />
                     GitHub
                   </a>
@@ -761,7 +848,7 @@ function ContactSection({ t }) {
                 <div className="flex flex-col gap-3">
                   {[
                     { icon: "https://cdn.jsdelivr.net/gh/twitter/twemoji/assets/svg/2709.svg", label: "ahmadikdinal@gmail.com", alt: "Email" },
-                    { icon: "https://cdn.jsdelivr.net/gh/twitter/twemoji/assets/svg/1f4cd.svg", label: "Surabaya, Indonesia — Remote Friendly", alt: "Location" },
+                    { icon: "https://cdn.jsdelivr.net/gh/twitter/twemoji/assets/svg/1f4cd.svg", label: "Bekasi, Indonesia", alt: "Location" },
                   ].map((item) => (
                     <div key={item.label} style={{ borderBottom: "2px solid rgba(255,255,255,0.2)" }} className="flex items-center gap-3 pb-3 last:border-0 last:pb-0">
                       <div style={{ border: "2px solid currentColor" }} className="w-10 h-10 flex items-center justify-center shrink-0">
