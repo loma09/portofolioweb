@@ -1,12 +1,11 @@
+cat > /mnt/user-data/outputs/Portfolio.jsx << 'ENDOFFILE'
 import { useState, useEffect, useRef, useCallback } from "react";
 import emailjs from "@emailjs/browser";
 
-// ── EmailJS Config ────────────────────────────────────────────────────
 const EMAILJS_SERVICE_ID  = "service_4xno1ig";
 const EMAILJS_TEMPLATE_ID = "template_soff31y";
 const EMAILJS_PUBLIC_KEY  = "lMOX0_atzJYRfoyFp";
 
-// ── Scroll-reveal hook ───────────────────────────────────────────────
 function useReveal(options = {}) {
   const ref = useRef(null);
   const [visible, setVisible] = useState(false);
@@ -41,8 +40,7 @@ function Reveal({ children, delay = 0, direction = "up", className = "" }) {
   );
 }
 
-// ── Data ─────────────────────────────────────────────────────────────
-const NAV_LINKS = ["Home", "Skills", "Projects", "Contact"];
+const NAV_LINKS = ["Home", "Skills", "Projects", "Game", "Contact"];
 
 const SKILLS = [
   { name: "Laravel",      accent: "#FF6B6B", icon: "https://cdn.jsdelivr.net/gh/devicons/devicon/icons/laravel/laravel-original.svg" },
@@ -86,12 +84,12 @@ const TAG_COLORS = {
   Flutter: "#54C5F8", Dart: "#00B4AB",
 };
 
-// ── Theme tokens ──────────────────────────────────────────────────────
 const THEMES = {
   light: {
     body: "#F4DF4E", card: "#ffffff", border: "#000000", text: "#000000",
     textMuted: "#444444", navBg: "#F4DF4E", skillsBg: "#000000",
     skillsText: "#ffffff", projectsBg: "#F4DF4E", contactBg: "#FF6B6B",
+    gameBg: "#000000",
     footerBg: "#000000", footerText: "#F4DF4E",
     shadow: "rgba(0,0,0,1)", shadowHero: "rgba(255,107,107,1)",
     shadowYellow: "rgba(244,223,78,1)", inputBg: "#F4DF4E",
@@ -101,12 +99,277 @@ const THEMES = {
     body: "#111111", card: "#1e1e1e", border: "#F4DF4E", text: "#F4DF4E",
     textMuted: "#aaaaaa", navBg: "#111111", skillsBg: "#0a0a0a",
     skillsText: "#F4DF4E", projectsBg: "#161616", contactBg: "#1a0808",
+    gameBg: "#0a0a0a",
     footerBg: "#0a0a0a", footerText: "#F4DF4E",
     shadow: "rgba(244,223,78,0.7)", shadowHero: "rgba(244,223,78,0.5)",
     shadowYellow: "rgba(244,223,78,0.6)", inputBg: "#2a2a2a",
     toggleBg: "#F4DF4E", toggleText: "#000000",
   },
 };
+
+// ── Snake Game ────────────────────────────────────────────────────────
+const CELL = 20;
+const COLS = 20;
+const ROWS = 20;
+const INIT_SNAKE = [{ x: 10, y: 10 }];
+const INIT_DIR = { x: 1, y: 0 };
+
+function randomFood(snake) {
+  let pos;
+  do {
+    pos = { x: Math.floor(Math.random() * COLS), y: Math.floor(Math.random() * ROWS) };
+  } while (snake.some(s => s.x === pos.x && s.y === pos.y));
+  return pos;
+}
+
+function SnakeGame({ t }) {
+  const canvasRef = useRef(null);
+  const [status, setStatus] = useState("idle"); // idle | playing | paused | dead
+  const [score, setScore] = useState(0);
+  const [highScore, setHighScore] = useState(0);
+  const snake = useRef(INIT_SNAKE);
+  const dir = useRef(INIT_DIR);
+  const nextDir = useRef(INIT_DIR);
+  const food = useRef({ x: 15, y: 10 });
+  const gameLoop = useRef(null);
+
+  const draw = useCallback(() => {
+    const canvas = canvasRef.current;
+    if (!canvas) return;
+    const ctx = canvas.getContext("2d");
+    ctx.fillStyle = "#0a0a0a";
+    ctx.fillRect(0, 0, COLS * CELL, ROWS * CELL);
+
+    // grid
+    ctx.strokeStyle = "rgba(255,255,255,0.04)";
+    ctx.lineWidth = 0.5;
+    for (let i = 0; i <= COLS; i++) {
+      ctx.beginPath(); ctx.moveTo(i * CELL, 0); ctx.lineTo(i * CELL, ROWS * CELL); ctx.stroke();
+    }
+    for (let j = 0; j <= ROWS; j++) {
+      ctx.beginPath(); ctx.moveTo(0, j * CELL); ctx.lineTo(COLS * CELL, j * CELL); ctx.stroke();
+    }
+
+    // food
+    ctx.fillStyle = "#FF6B6B";
+    ctx.strokeStyle = "#000";
+    ctx.lineWidth = 2;
+    ctx.fillRect(food.current.x * CELL + 2, food.current.y * CELL + 2, CELL - 4, CELL - 4);
+    ctx.strokeRect(food.current.x * CELL + 2, food.current.y * CELL + 2, CELL - 4, CELL - 4);
+
+    // snake
+    snake.current.forEach((seg, i) => {
+      ctx.fillStyle = i === 0 ? "#F4DF4E" : "#A8FF78";
+      ctx.strokeStyle = "#000";
+      ctx.lineWidth = 2;
+      ctx.fillRect(seg.x * CELL + 1, seg.y * CELL + 1, CELL - 2, CELL - 2);
+      ctx.strokeRect(seg.x * CELL + 1, seg.y * CELL + 1, CELL - 2, CELL - 2);
+    });
+  }, []);
+
+  const tick = useCallback(() => {
+    dir.current = nextDir.current;
+    const head = {
+      x: (snake.current[0].x + dir.current.x + COLS) % COLS,
+      y: (snake.current[0].y + dir.current.y + ROWS) % ROWS,
+    };
+    // self collision
+    if (snake.current.some(s => s.x === head.x && s.y === head.y)) {
+      setStatus("dead");
+      setHighScore(prev => Math.max(prev, score));
+      clearInterval(gameLoop.current);
+      return;
+    }
+    const ate = head.x === food.current.x && head.y === food.current.y;
+    const newSnake = [head, ...snake.current];
+    if (!ate) newSnake.pop();
+    else {
+      food.current = randomFood(newSnake);
+      setScore(s => s + 10);
+    }
+    snake.current = newSnake;
+    draw();
+  }, [draw, score]);
+
+  const startGame = useCallback(() => {
+    snake.current = [{ x: 10, y: 10 }];
+    dir.current = { x: 1, y: 0 };
+    nextDir.current = { x: 1, y: 0 };
+    food.current = randomFood(snake.current);
+    setScore(0);
+    setStatus("playing");
+    clearInterval(gameLoop.current);
+    gameLoop.current = setInterval(tick, 120);
+    draw();
+  }, [tick, draw]);
+
+  const togglePause = useCallback(() => {
+    if (status === "playing") {
+      clearInterval(gameLoop.current);
+      setStatus("paused");
+    } else if (status === "paused") {
+      gameLoop.current = setInterval(tick, 120);
+      setStatus("playing");
+    }
+  }, [status, tick]);
+
+  useEffect(() => {
+    draw();
+    return () => clearInterval(gameLoop.current);
+  }, [draw]);
+
+  useEffect(() => {
+    if (status !== "playing") return;
+    clearInterval(gameLoop.current);
+    gameLoop.current = setInterval(tick, 120);
+    return () => clearInterval(gameLoop.current);
+  }, [tick, status]);
+
+  useEffect(() => {
+    const handleKey = (e) => {
+      if (["ArrowUp","ArrowDown","ArrowLeft","ArrowRight","w","a","s","d"].includes(e.key)) {
+        e.preventDefault();
+      }
+      if (status !== "playing") return;
+      const map = {
+        ArrowUp:    { x: 0, y: -1 }, w: { x: 0, y: -1 },
+        ArrowDown:  { x: 0, y: 1 },  s: { x: 0, y: 1 },
+        ArrowLeft:  { x: -1, y: 0 }, a: { x: -1, y: 0 },
+        ArrowRight: { x: 1, y: 0 },  d: { x: 1, y: 0 },
+      };
+      const d = map[e.key];
+      if (d && !(d.x === -dir.current.x && d.y === -dir.current.y)) {
+        nextDir.current = d;
+      }
+    };
+    window.addEventListener("keydown", handleKey);
+    return () => window.removeEventListener("keydown", handleKey);
+  }, [status]);
+
+  // Mobile swipe
+  const touchStart = useRef(null);
+  const handleTouchStart = (e) => { touchStart.current = e.touches[0]; };
+  const handleTouchEnd = (e) => {
+    if (!touchStart.current || status !== "playing") return;
+    const dx = e.changedTouches[0].clientX - touchStart.current.clientX;
+    const dy = e.changedTouches[0].clientY - touchStart.current.clientY;
+    if (Math.abs(dx) > Math.abs(dy)) {
+      const d = dx > 0 ? { x: 1, y: 0 } : { x: -1, y: 0 };
+      if (!(d.x === -dir.current.x)) nextDir.current = d;
+    } else {
+      const d = dy > 0 ? { x: 0, y: 1 } : { x: 0, y: -1 };
+      if (!(d.y === -dir.current.y)) nextDir.current = d;
+    }
+  };
+
+  return (
+    <section id="game" style={{ background: t.gameBg, transition: "background 0.4s ease" }} className="py-20">
+      <div className="max-w-6xl mx-auto px-4">
+        <Reveal direction="left">
+          <div className="mb-12">
+            <div style={{ background: "#F4DF4E", border: "4px solid #F4DF4E", color: "#000" }} className="inline-block px-4 py-2 font-black text-sm uppercase tracking-widest mb-4">
+              Take A Break
+            </div>
+            <h2 className="font-black text-5xl md:text-7xl uppercase tracking-tighter" style={{ color: "#F4DF4E" }}>
+              SNAKE<br /><span style={{ color: "#FF6B6B" }}>GAME_</span>
+            </h2>
+          </div>
+        </Reveal>
+
+        <Reveal direction="up" delay={100}>
+          <div className="flex flex-col lg:flex-row gap-8 items-start">
+            {/* Canvas */}
+            <div style={{ border: "4px solid #F4DF4E", boxShadow: "8px 8px 0 0 rgba(244,223,78,0.5)", position: "relative" }}>
+              <canvas
+                ref={canvasRef}
+                width={COLS * CELL}
+                height={ROWS * CELL}
+                onTouchStart={handleTouchStart}
+                onTouchEnd={handleTouchEnd}
+                style={{ display: "block" }}
+              />
+              {/* Overlay for idle/dead/paused */}
+              {status !== "playing" && (
+                <div style={{ position: "absolute", inset: 0, background: "rgba(0,0,0,0.85)", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: "16px" }}>
+                  {status === "dead" && (
+                    <>
+                      <p className="font-black text-2xl uppercase tracking-widest" style={{ color: "#FF6B6B" }}>GAME OVER</p>
+                      <p className="font-black text-lg" style={{ color: "#F4DF4E" }}>Score: {score}</p>
+                      <p className="font-bold text-sm" style={{ color: "#aaa" }}>Best: {highScore}</p>
+                    </>
+                  )}
+                  {status === "idle" && (
+                    <p className="font-black text-xl uppercase tracking-widest" style={{ color: "#F4DF4E" }}>Press START</p>
+                  )}
+                  {status === "paused" && (
+                    <p className="font-black text-xl uppercase tracking-widest" style={{ color: "#F4DF4E" }}>PAUSED</p>
+                  )}
+                  <button
+                    onClick={startGame}
+                    style={{ background: "#F4DF4E", color: "#000", border: "4px solid #F4DF4E", boxShadow: "6px 6px 0 0 #FF6B6B" }}
+                    className="font-black uppercase tracking-widest text-sm px-8 py-3 cursor-pointer"
+                  >
+                    {status === "dead" ? "RETRY →" : "START →"}
+                  </button>
+                </div>
+              )}
+            </div>
+
+            {/* Controls panel */}
+            <div className="flex flex-col gap-4" style={{ minWidth: "200px" }}>
+              {/* Score */}
+              <div style={{ background: "#1e1e1e", border: "4px solid #F4DF4E", boxShadow: "6px 6px 0 0 rgba(244,223,78,0.5)", padding: "20px" }}>
+                <p className="font-black text-xs uppercase tracking-widest mb-1" style={{ color: "#aaa" }}>Score</p>
+                <p className="font-black text-4xl" style={{ color: "#F4DF4E" }}>{score}</p>
+              </div>
+              <div style={{ background: "#1e1e1e", border: "4px solid #FF6B6B", boxShadow: "6px 6px 0 0 rgba(255,107,107,0.4)", padding: "20px" }}>
+                <p className="font-black text-xs uppercase tracking-widest mb-1" style={{ color: "#aaa" }}>Best</p>
+                <p className="font-black text-4xl" style={{ color: "#FF6B6B" }}>{highScore}</p>
+              </div>
+
+              {/* Buttons */}
+              {status === "playing" && (
+                <button
+                  onClick={togglePause}
+                  style={{ background: "#F4DF4E", color: "#000", border: "4px solid #F4DF4E", boxShadow: "4px 4px 0 0 rgba(244,223,78,0.5)" }}
+                  className="font-black uppercase tracking-widest text-sm px-6 py-3 cursor-pointer"
+                >
+                  ⏸ PAUSE
+                </button>
+              )}
+              {status === "paused" && (
+                <button
+                  onClick={togglePause}
+                  style={{ background: "#A8FF78", color: "#000", border: "4px solid #A8FF78", boxShadow: "4px 4px 0 0 rgba(168,255,120,0.5)" }}
+                  className="font-black uppercase tracking-widest text-sm px-6 py-3 cursor-pointer"
+                >
+                  ▶ RESUME
+                </button>
+              )}
+
+              {/* Controls legend */}
+              <div style={{ border: "4px solid rgba(244,223,78,0.3)", padding: "16px" }}>
+                <p className="font-black text-xs uppercase tracking-widest mb-3" style={{ color: "#F4DF4E" }}>Controls</p>
+                {[
+                  { key: "↑ W", label: "Up" },
+                  { key: "↓ S", label: "Down" },
+                  { key: "← A", label: "Left" },
+                  { key: "→ D", label: "Right" },
+                ].map(k => (
+                  <div key={k.key} className="flex justify-between mb-1">
+                    <span className="font-black text-xs" style={{ color: "#F4DF4E" }}>{k.key}</span>
+                    <span className="font-bold text-xs" style={{ color: "#aaa" }}>{k.label}</span>
+                  </div>
+                ))}
+                <p className="font-bold text-xs mt-2" style={{ color: "#555" }}>Swipe on mobile</p>
+              </div>
+            </div>
+          </div>
+        </Reveal>
+      </div>
+    </section>
+  );
+}
 
 // ── Navbar ────────────────────────────────────────────────────────────
 function Navbar({ active, dark, toggleDark, t }) {
@@ -226,6 +489,13 @@ function HeroSection({ t }) {
                   className="font-black uppercase tracking-widest text-base px-8 py-4 cursor-pointer">
                   Hire Me →
                 </button>
+                <a href="/CV_Ahmad_Ikdinal.pdf" download="CV_Ahmad_Ikdinal.pdf"
+                  style={{ background: "#A8FF78", color: "#000", border: `4px solid ${t.border}`, boxShadow: `8px 8px 0 0 ${t.shadow}`, transition: "all 0.4s ease" }}
+                  onMouseEnter={e => { e.currentTarget.style.transform = "translate(4px,4px)"; e.currentTarget.style.boxShadow = `4px 4px 0 0 ${t.shadow}`; }}
+                  onMouseLeave={e => { e.currentTarget.style.transform = "none"; e.currentTarget.style.boxShadow = `8px 8px 0 0 ${t.shadow}`; }}
+                  className="font-black uppercase tracking-widest text-base px-8 py-4 cursor-pointer flex items-center gap-2">
+                  ↓ Download CV
+                </a>
                 <a href="https://github.com/loma09" target="_blank" rel="noopener noreferrer"
                   style={{ background: t.body, color: t.text, border: `4px solid ${t.border}`, boxShadow: `8px 8px 0 0 ${t.shadow}`, transition: "all 0.4s ease" }}
                   onMouseEnter={e => { e.currentTarget.style.transform = "translate(4px,4px)"; e.currentTarget.style.boxShadow = `4px 4px 0 0 ${t.shadow}`; }}
@@ -258,7 +528,7 @@ function HeroSection({ t }) {
           {[
             { num: "9+",   label: "Repositories" },
             { num: "6",    label: "Core Skills" },
-            { num: "3+",   label: "Languages" },
+            { num: "3.89", label: "GPA" },
             { num: "Open", label: "To Hire" },
           ].map((s, i) => (
             <Reveal key={s.label} direction="up" delay={i * 80}>
@@ -274,7 +544,6 @@ function HeroSection({ t }) {
   );
 }
 
-// ── Skills ────────────────────────────────────────────────────────────
 function SkillsSection({ t, dark }) {
   return (
     <section id="skills" style={{ background: t.skillsBg, transition: "background 0.4s ease" }} className="py-20">
@@ -314,7 +583,6 @@ function SkillsSection({ t, dark }) {
   );
 }
 
-// ── Projects ──────────────────────────────────────────────────────────
 function ProjectsSection({ t }) {
   return (
     <section id="projects" style={{ background: t.projectsBg, transition: "background 0.4s ease" }} className="py-20">
@@ -337,7 +605,6 @@ function ProjectsSection({ t }) {
             github.com/loma09 → 9 repositories
           </a>
         </Reveal>
-
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
           {PROJECTS.map((project, i) => (
             <Reveal key={project.title} direction="up" delay={i * 120}>
@@ -369,7 +636,6 @@ function ProjectsSection({ t }) {
                     {project.lang}
                   </div>
                 </div>
-
                 <div className="p-5 flex flex-col flex-1">
                   <div className="flex flex-wrap gap-2 mb-3">
                     {project.tags.map((tag) => (
@@ -398,41 +664,28 @@ function ProjectsSection({ t }) {
   );
 }
 
-// ── Contact ───────────────────────────────────────────────────────────
 function ContactSection({ t }) {
   const formRef = useRef(null);
   const [form, setForm] = useState({ name: "", email: "", message: "" });
-  // status: "idle" | "sending" | "success" | "error"
   const [status, setStatus] = useState("idle");
-
   const handleChange = (e) => setForm({ ...form, [e.target.name]: e.target.value });
-
   const handleSubmit = async (e) => {
     e.preventDefault();
     setStatus("sending");
-
     try {
-      await emailjs.sendForm(
-        EMAILJS_SERVICE_ID,
-        EMAILJS_TEMPLATE_ID,
-        formRef.current,
-        EMAILJS_PUBLIC_KEY
-      );
+      await emailjs.sendForm(EMAILJS_SERVICE_ID, EMAILJS_TEMPLATE_ID, formRef.current, EMAILJS_PUBLIC_KEY);
       setStatus("success");
       setForm({ name: "", email: "", message: "" });
       setTimeout(() => setStatus("idle"), 4000);
     } catch (err) {
-      console.error("EmailJS error:", err);
       setStatus("error");
       setTimeout(() => setStatus("idle"), 4000);
     }
   };
-
   const inputStyle = {
     background: t.inputBg, border: `4px solid ${t.border}`, color: t.text,
     boxShadow: `4px 4px 0 0 ${t.shadow}`, outline: "none", width: "100%",
-    padding: "12px 16px", fontWeight: "700", fontSize: "16px", transition: "all 0.15s ease",
-    fontFamily: "inherit",
+    padding: "12px 16px", fontWeight: "700", fontSize: "16px", transition: "all 0.15s ease", fontFamily: "inherit",
   };
 
   return (
@@ -448,12 +701,9 @@ function ContactSection({ t }) {
             </h2>
           </div>
         </Reveal>
-
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
           <Reveal direction="left" delay={100}>
             <div style={{ background: t.card, border: `4px solid ${t.border}`, boxShadow: `12px 12px 0 0 ${t.shadow}`, transition: "all 0.4s ease" }} className="p-8">
-
-              {/* SUCCESS STATE */}
               {status === "success" && (
                 <div className="flex flex-col items-center justify-center min-h-[300px] text-center">
                   <div style={{ background: "#A8FF78", border: `4px solid ${t.border}`, boxShadow: `6px 6px 0 0 ${t.shadow}` }} className="p-6 mb-4">
@@ -463,49 +713,35 @@ function ContactSection({ t }) {
                   <p style={{ color: t.textMuted }} className="font-bold mt-2">I'll get back to you within 24 hours.</p>
                 </div>
               )}
-
-              {/* ERROR STATE */}
               {status === "error" && (
                 <div className="flex flex-col items-center justify-center min-h-[300px] text-center">
                   <div style={{ background: "#FF6B6B", border: `4px solid ${t.border}`, boxShadow: `6px 6px 0 0 ${t.shadow}` }} className="p-6 mb-4">
                     <img src="https://cdn.jsdelivr.net/gh/twitter/twemoji/assets/svg/274c.svg" alt="Error" className="w-16 h-16 mx-auto" />
                   </div>
                   <h3 style={{ color: t.text }} className="font-black text-2xl uppercase tracking-tight">Send Failed!</h3>
-                  <p style={{ color: t.textMuted }} className="font-bold mt-2">Something went wrong. Please try again or email directly.</p>
+                  <p style={{ color: t.textMuted }} className="font-bold mt-2">Please try again or email directly.</p>
                 </div>
               )}
-
-              {/* FORM STATE */}
               {(status === "idle" || status === "sending") && (
                 <form ref={formRef} onSubmit={handleSubmit} className="flex flex-col gap-5">
                   {[
-                    { label: "Your Name",      name: "name",    type: "text",  placeholder: "John Doe" },
-                    { label: "Email Address",  name: "email",   type: "email", placeholder: "john@example.com" },
+                    { label: "Your Name", name: "name", type: "text", placeholder: "John Doe" },
+                    { label: "Email Address", name: "email", type: "email", placeholder: "john@example.com" },
                   ].map((field) => (
                     <div key={field.name}>
                       <label style={{ color: t.text }} className="font-black text-xs uppercase tracking-widest block mb-2">{field.label} *</label>
-                      <input
-                        type={field.type} name={field.name} value={form[field.name]}
-                        onChange={handleChange} required placeholder={field.placeholder}
-                        style={inputStyle}
+                      <input type={field.type} name={field.name} value={form[field.name]} onChange={handleChange} required placeholder={field.placeholder} style={inputStyle}
                         onFocus={e => { e.currentTarget.style.transform = "translate(2px,2px)"; e.currentTarget.style.boxShadow = "none"; }}
-                        onBlur={e => { e.currentTarget.style.transform = "none"; e.currentTarget.style.boxShadow = `4px 4px 0 0 ${t.shadow}`; }}
-                      />
+                        onBlur={e => { e.currentTarget.style.transform = "none"; e.currentTarget.style.boxShadow = `4px 4px 0 0 ${t.shadow}`; }} />
                     </div>
                   ))}
                   <div>
                     <label style={{ color: t.text }} className="font-black text-xs uppercase tracking-widest block mb-2">Message *</label>
-                    <textarea
-                      name="message" value={form.message} onChange={handleChange}
-                      required rows={5} placeholder="Tell me about your project..."
-                      style={{ ...inputStyle, resize: "none" }}
+                    <textarea name="message" value={form.message} onChange={handleChange} required rows={5} placeholder="Tell me about your project..." style={{ ...inputStyle, resize: "none" }}
                       onFocus={e => { e.currentTarget.style.transform = "translate(2px,2px)"; e.currentTarget.style.boxShadow = "none"; }}
-                      onBlur={e => { e.currentTarget.style.transform = "none"; e.currentTarget.style.boxShadow = `4px 4px 0 0 ${t.shadow}`; }}
-                    />
+                      onBlur={e => { e.currentTarget.style.transform = "none"; e.currentTarget.style.boxShadow = `4px 4px 0 0 ${t.shadow}`; }} />
                   </div>
-                  <button
-                    type="submit"
-                    disabled={status === "sending"}
+                  <button type="submit" disabled={status === "sending"}
                     style={{ background: t.text, color: t.body, border: `4px solid ${t.border}`, boxShadow: `8px 8px 0 0 ${t.shadowHero}`, transition: "all 0.15s ease", opacity: status === "sending" ? 0.7 : 1, cursor: status === "sending" ? "wait" : "pointer" }}
                     onMouseEnter={e => { if (status !== "sending") { e.currentTarget.style.transform = "translate(4px,4px)"; e.currentTarget.style.boxShadow = `4px 4px 0 0 ${t.shadowHero}`; }}}
                     onMouseLeave={e => { e.currentTarget.style.transform = "none"; e.currentTarget.style.boxShadow = `8px 8px 0 0 ${t.shadowHero}`; }}
@@ -516,7 +752,6 @@ function ContactSection({ t }) {
               )}
             </div>
           </Reveal>
-
           <div className="flex flex-col gap-6">
             <Reveal direction="right" delay={150}>
               <div style={{ background: t.text, color: t.body, border: `4px solid ${t.border}`, boxShadow: `12px 12px 0 0 ${t.shadow}`, transition: "all 0.4s ease" }} className="p-8">
@@ -536,14 +771,13 @@ function ContactSection({ t }) {
                 </div>
               </div>
             </Reveal>
-
             <Reveal direction="right" delay={250}>
               <div style={{ background: t.card, border: `4px solid ${t.border}`, boxShadow: `12px 12px 0 0 ${t.shadow}`, transition: "all 0.4s ease" }} className="p-8">
                 <h3 style={{ color: t.text }} className="font-black text-xl uppercase tracking-tight mb-5">Find Me Online</h3>
                 <div className="flex flex-col gap-4">
                   {[
-                    { label: "GitHub",   sub: "@loma09 — 9 Repositories", bg: "#24292e", icon: "https://cdn.jsdelivr.net/gh/devicons/devicon/icons/github/github-original.svg",   href: "https://github.com/loma09" },
-                    { label: "LinkedIn", sub: "Ahmad Ikdinal",             bg: "#0077B5", icon: "https://cdn.jsdelivr.net/gh/devicons/devicon/icons/linkedin/linkedin-original.svg", href: "https://www.linkedin.com/in/ahmad-ikdinal-5aa688263/" },
+                    { label: "GitHub", sub: "@loma09 — 9 Repositories", bg: "#24292e", icon: "https://cdn.jsdelivr.net/gh/devicons/devicon/icons/github/github-original.svg", href: "https://github.com/loma09" },
+                    { label: "LinkedIn", sub: "Ahmad Ikdinal", bg: "#0077B5", icon: "https://cdn.jsdelivr.net/gh/devicons/devicon/icons/linkedin/linkedin-original.svg", href: "https://www.linkedin.com/in/ahmad-ikdinal-5aa688263/" },
                   ].map((social) => (
                     <a key={social.label} href={social.href} target="_blank" rel="noopener noreferrer"
                       style={{ background: social.bg, border: `4px solid ${t.border}`, boxShadow: `6px 6px 0 0 ${t.shadow}`, transition: "all 0.15s ease" }}
@@ -570,7 +804,6 @@ function ContactSection({ t }) {
   );
 }
 
-// ── Footer ────────────────────────────────────────────────────────────
 function Footer({ t }) {
   return (
     <footer style={{ background: t.footerBg, borderTop: `4px solid ${t.border}`, transition: "all 0.4s ease" }} className="py-8">
@@ -591,7 +824,6 @@ function Footer({ t }) {
   );
 }
 
-// ── Root ──────────────────────────────────────────────────────────────
 export default function Portfolio() {
   const [dark, setDark] = useState(false);
   const [activeSection, setActiveSection] = useState("home");
@@ -607,7 +839,7 @@ export default function Portfolio() {
   }, [dark]);
 
   useEffect(() => {
-    const sections = ["home", "skills", "projects", "contact"];
+    const sections = ["home", "skills", "projects", "game", "contact"];
     const observers = sections.map((id) => {
       const el = document.getElementById(id);
       if (!el) return null;
@@ -627,6 +859,7 @@ export default function Portfolio() {
       <HeroSection t={t} />
       <SkillsSection t={t} dark={dark} />
       <ProjectsSection t={t} />
+      <SnakeGame t={t} />
       <ContactSection t={t} />
       <Footer t={t} />
     </div>
