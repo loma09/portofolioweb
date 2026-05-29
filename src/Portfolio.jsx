@@ -1,4 +1,3 @@
-
 import { useState, useEffect, useRef, useCallback } from "react";
 import emailjs from "@emailjs/browser";
 
@@ -85,20 +84,20 @@ const PROJECTS = [
     link: "https://github.com/loma09/promptlab",
   },
   {
-  title: "Microquest",
-  description: "A web development learning platform where users complete coding challenges and get instant feedback from AI as the judge. Built to help beginners practice HTML, CSS, and JavaScript through guided micro-tasks.",
-  tags: ["JavaScript"],
-  mockupBg: "#0a0a2e", accentBar: "#61DAFB",
-  lang: "JavaScript", langColor: "#61DAFB",
-  link: "https://github.com/loma09/microquest",
+    title: "Microquest",
+    description: "A web development learning platform where users complete coding challenges and get instant feedback from AI as the judge. Built to help beginners practice HTML, CSS, and JavaScript through guided micro-tasks.",
+    tags: ["JavaScript"],
+    mockupBg: "#0a0a2e", accentBar: "#61DAFB",
+    lang: "JavaScript", langColor: "#61DAFB",
+    link: "https://github.com/loma09/microquest",
   },
   {
-  title: "PanganTrace AI",
-  description: "Intelligent food supply chain monitoring & fraud detection platform powered by Azure AI. Detects subsidy leakage and price manipulation across Indonesia's national food distribution network.",
-  tags: ["Next.js", "Python", "Laravel"],
-  mockupBg: "#0a1a0a", accentBar: "#A8FF78",
-  lang: "Next.js / FastAPI", langColor: "#38BDF8",
-  link: "https://github.com/loma09/pangantrace-ai",
+    title: "PanganTrace AI",
+    description: "Intelligent food supply chain monitoring & fraud detection platform powered by Azure AI. Detects subsidy leakage and price manipulation across Indonesia's national food distribution network.",
+    tags: ["Next.js", "Python", "Laravel"],
+    mockupBg: "#0a1a0a", accentBar: "#A8FF78",
+    lang: "Next.js / FastAPI", langColor: "#38BDF8",
+    link: "https://github.com/loma09/pangantrace-ai",
   },
 ];
 
@@ -120,14 +119,14 @@ const THEMES = {
     toggleBg: "#000000", toggleText: "#F4DF4E",
   },
   dark: {
-  body: "#111111", card: "#1e1a14", border: "#c9a84c", text: "#e8dfc0",
-  textMuted: "#a89878", navBg: "#111111", skillsBg: "#0a0a08",
-  skillsText: "#e8dfc0", projectsBg: "#161410", contactBg: "#1a1208",
-  gameBg: "#0a0a08",
-  footerBg: "#0a0a08", footerText: "#e8dfc0",
-  shadow: "rgba(201,168,76,0.7)", shadowHero: "rgba(201,168,76,0.5)",
-  shadowYellow: "rgba(201,168,76,0.6)", inputBg: "#2a2418",
-  toggleBg: "#c9a84c", toggleText: "#000000",
+    body: "#111111", card: "#1e1a14", border: "#c9a84c", text: "#e8dfc0",
+    textMuted: "#a89878", navBg: "#111111", skillsBg: "#0a0a08",
+    skillsText: "#e8dfc0", projectsBg: "#161410", contactBg: "#1a1208",
+    gameBg: "#0a0a08",
+    footerBg: "#0a0a08", footerText: "#e8dfc0",
+    shadow: "rgba(201,168,76,0.7)", shadowHero: "rgba(201,168,76,0.5)",
+    shadowYellow: "rgba(201,168,76,0.6)", inputBg: "#2a2418",
+    toggleBg: "#c9a84c", toggleText: "#000000",
   },
 };
 
@@ -458,10 +457,12 @@ function SnakeGame({ t }) {
   );
 }
 
-function LoadingScreen({ onDone, visible }) {
+// ── Loading Screen — FIXED ────────────────────────────────────────────
+// PERUBAHAN: Hapus document.body.style.overflow, ganti done+visible jadi fadeOut saja
+function LoadingScreen({ onDone }) {
   const [lines, setLines] = useState([]);
   const [progress, setProgress] = useState(0);
-  const [done, setDone] = useState(false);
+  const [fadeOut, setFadeOut] = useState(false);
 
   const sequence = [
     "> INITIALIZING PORTFOLIO.EXE...",
@@ -474,35 +475,48 @@ function LoadingScreen({ onDone, visible }) {
   ];
 
   useEffect(() => {
-    document.body.style.overflow = "hidden";
+    // Reset state on each effect run (fixes React 19 StrictMode double-mount)
+    setLines([]);
+    setProgress(0);
+    setFadeOut(false);
+
     let lineIndex = 0;
+    let done = false;
     const interval = setInterval(() => {
+      if (done) return;
       if (lineIndex < sequence.length) {
-        setLines(prev => [...prev, sequence[lineIndex]]);
+        const currentLine = sequence[lineIndex];
         lineIndex++;
+        setLines(prev => {
+          // Rebuild from scratch to avoid stale/duplicate entries
+          const next = sequence.slice(0, lineIndex);
+          return next;
+        });
         setProgress(Math.round((lineIndex / sequence.length) * 100));
       } else {
+        done = true;
         clearInterval(interval);
         setTimeout(() => {
-          setDone(true);
-          document.body.style.overflow = "";
-          setTimeout(() => onDone(), 500);
+          setFadeOut(true);
+          // Wait for fade animation to finish then call onDone
+          setTimeout(() => onDone(), 600);
         }, 400);
       }
     }, 300);
-    return () => { clearInterval(interval); document.body.style.overflow = ""; };
+    return () => {
+      done = true;
+      clearInterval(interval);
+    };
   }, []);
-
-  if (!visible && done) return null;
 
   return (
     <div style={{
       position: "fixed", inset: 0, background: "#000", zIndex: 9999,
       display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center",
       fontFamily: "'Courier New', Courier, monospace",
-      opacity: done ? 0 : 1,
-      transition: "opacity 0.5s ease",
-      pointerEvents: done ? "none" : "all",
+      opacity: fadeOut ? 0 : 1,
+      transition: "opacity 0.6s ease",
+      pointerEvents: fadeOut ? "none" : "all",
     }}>
       <div style={{ width: "min(600px, 90vw)" }}>
         <div style={{ borderBottom: "2px solid #F4DF4E", paddingBottom: "12px", marginBottom: "24px" }}>
@@ -516,11 +530,11 @@ function LoadingScreen({ onDone, visible }) {
         <div style={{ minHeight: "200px", marginBottom: "24px" }}>
           {lines.map((line, i) => (
             <p key={i} style={{
-              color: line.includes("OK") ? "#A8FF78" : line.includes("WELCOME") ? "#F4DF4E" : "#e8dfc0",
+              color: (line && line.includes("OK")) ? "#A8FF78" : (line && line.includes("WELCOME")) ? "#F4DF4E" : "#e8dfc0",
               fontSize: "13px", marginBottom: "6px", letterSpacing: "1px",
             }}>
-              {line}
-              {i === lines.length - 1 && !done && (
+              {line || ""}
+              {i === lines.length - 1 && !fadeOut && (
                 <span style={{ color: "#F4DF4E", animation: "blink 1s infinite" }}>█</span>
               )}
             </p>
@@ -678,7 +692,7 @@ function HeroSection({ t }) {
                     <img src="https://cdn.jsdelivr.net/gh/devicons/devicon/icons/github/github-original.svg" alt="GitHub" className="w-5 h-5" />
                     GitHub
                   </a>
-               </div>
+                </div>
               </div>
             </Reveal>
           </div>
@@ -999,22 +1013,43 @@ function Footer({ t }) {
   );
 }
 
+// ── Portfolio Root — FIXED ────────────────────────────────────────────
 export default function Portfolio() {
-  const [dark, setDark] = useState(false);
+  // FIX 1: Baca dark mode dari localStorage dengan lazy initializer (aman, tidak error saat SSR)
+  const [dark, setDark] = useState(() => {
+    try { return localStorage.getItem("portfolio-dark") === "true"; } catch (e) { return false; }
+  });
+
+  // FIX 2: showLoading hanya true jika belum pernah visit di session ini
+  const [showLoading, setShowLoading] = useState(() => {
+    try { return !sessionStorage.getItem("portfolio-loaded"); } catch (e) { return true; }
+  });
+
+  // FIX 3: showContent langsung true kalau sudah pernah visit (tidak perlu loading lagi)
+  const [showContent, setShowContent] = useState(() => {
+    try { return !!sessionStorage.getItem("portfolio-loaded"); } catch (e) { return false; }
+  });
+
   const [activeSection, setActiveSection] = useState("home");
   const t = dark ? THEMES.dark : THEMES.light;
-  const [loading, setLoading] = useState(true);
-  const toggleDark = useCallback(() => setDark((d) => !d), []);
 
-  useEffect(() => {
-    const saved = localStorage.getItem("portfolio-dark");
-    if (saved === "true") setDark(true);
+  const toggleDark = useCallback(() => {
+    setDark(d => {
+      const next = !d;
+      try { localStorage.setItem("portfolio-dark", String(next)); } catch (e) {}
+      return next;
+    });
   }, []);
-  useEffect(() => {
-    localStorage.setItem("portfolio-dark", dark);
-  }, [dark]);
+
+  // FIX 4: onDone set showContent=true dan simpan flag — konten TIDAK pernah menghilang
+  const handleLoadingDone = useCallback(() => {
+    try { sessionStorage.setItem("portfolio-loaded", "1"); } catch (e) {}
+    setShowContent(true);
+    setShowLoading(false);
+  }, []);
 
   useEffect(() => {
+    if (!showContent) return;
     const sections = ["home", "skills", "projects", "game", "contact"];
     const observers = sections.map((id) => {
       const el = document.getElementById(id);
@@ -1027,18 +1062,32 @@ export default function Portfolio() {
       return obs;
     });
     return () => observers.forEach((o) => o?.disconnect());
-  }, []);
+  }, [showContent]);
 
   return (
-    <div style={{ background: t.body, transition: "background 0.4s ease", fontFamily: "'Courier New', Courier, monospace" }}>
-      <LoadingScreen onDone={() => setLoading(false)} visible={loading} />
-      <Navbar active={activeSection} dark={dark} toggleDark={toggleDark} t={t} />
-      <HeroSection t={t} />
-      <SkillsSection t={t} dark={dark} />
-      <ProjectsSection t={t} />
-      <SnakeGame t={t} />
-      <ContactSection t={t} />
-      <Footer t={t} />
-    </div>
+    <>
+      {/* Loading screen hanya render kalau showLoading = true */}
+      {showLoading && <LoadingScreen onDone={handleLoadingDone} />}
+
+      {/*
+        FIX UTAMA: Konten selalu dirender di DOM.
+        Pakai visibility:hidden (bukan conditional render / display:none)
+        supaya tidak pernah ada halaman kosong.
+      */}
+      <div style={{
+        background: t.body,
+        fontFamily: "'Courier New', Courier, monospace",
+        transition: "background 0.4s ease",
+        visibility: showContent ? "visible" : "hidden",
+      }}>
+        <Navbar active={activeSection} dark={dark} toggleDark={toggleDark} t={t} />
+        <HeroSection t={t} />
+        <SkillsSection t={t} dark={dark} />
+        <ProjectsSection t={t} />
+        <SnakeGame t={t} />
+        <ContactSection t={t} />
+        <Footer t={t} />
+      </div>
+    </>
   );
 }
