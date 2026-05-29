@@ -1,9 +1,9 @@
 import { useState, useEffect, useRef, useCallback } from "react";
 import emailjs from "@emailjs/browser";
 
-const EMAILJS_SERVICE_ID  = "service_4xno1ig";
+const EMAILJS_SERVICE_ID = "service_4xno1ig";
 const EMAILJS_TEMPLATE_ID = "template_soff31y";
-const EMAILJS_PUBLIC_KEY  = "lMOX0_atzJYRfoyFp";
+const EMAILJS_PUBLIC_KEY = "lMOX0_atzJYRfoyFp";
 
 function useReveal(options = {}) {
   const ref = useRef(null);
@@ -42,11 +42,11 @@ function Reveal({ children, delay = 0, direction = "up", className = "" }) {
 const NAV_LINKS = ["Home", "Skills", "Projects", "Game", "Contact"];
 
 const SKILLS = [
-  { name: "Laravel",      accent: "#FF6B6B", icon: "https://cdn.jsdelivr.net/gh/devicons/devicon/icons/laravel/laravel-original.svg" },
-  { name: "React",        accent: "#61DAFB", icon: "https://cdn.jsdelivr.net/gh/devicons/devicon/icons/react/react-original.svg" },
-  { name: "Next.js",      accent: "#e5e5e5", icon: "https://cdn.jsdelivr.net/gh/devicons/devicon/icons/nextjs/nextjs-original.svg" },
-  { name: "Python",       accent: "#4B8BBE", icon: "https://cdn.jsdelivr.net/gh/devicons/devicon/icons/python/python-original.svg" },
-  { name: "SQL",          accent: "#F29111", icon: "https://cdn.jsdelivr.net/gh/devicons/devicon/icons/mysql/mysql-original.svg" },
+  { name: "Laravel", accent: "#FF6B6B", icon: "https://cdn.jsdelivr.net/gh/devicons/devicon/icons/laravel/laravel-original.svg" },
+  { name: "React", accent: "#61DAFB", icon: "https://cdn.jsdelivr.net/gh/devicons/devicon/icons/react/react-original.svg" },
+  { name: "Next.js", accent: "#e5e5e5", icon: "https://cdn.jsdelivr.net/gh/devicons/devicon/icons/nextjs/nextjs-original.svg" },
+  { name: "Python", accent: "#4B8BBE", icon: "https://cdn.jsdelivr.net/gh/devicons/devicon/icons/python/python-original.svg" },
+  { name: "SQL", accent: "#F29111", icon: "https://cdn.jsdelivr.net/gh/devicons/devicon/icons/mysql/mysql-original.svg" },
   { name: "Tailwind CSS", accent: "#38BDF8", icon: "https://cdn.jsdelivr.net/gh/devicons/devicon/icons/tailwindcss/tailwindcss-original.svg" },
 ];
 
@@ -192,7 +192,7 @@ function SnakeGame({ t }) {
         osc.stop(ctx.currentTime + 0.04);
       }
       osc.onended = () => ctx.close();
-    } catch (e) {}
+    } catch (e) { }
   }, []);
 
   const spawnBonus = useCallback(() => {
@@ -325,7 +325,7 @@ function SnakeGame({ t }) {
 
   useEffect(() => {
     const handleKey = (e) => {
-      if (["ArrowUp","ArrowDown","ArrowLeft","ArrowRight","w","a","s","d"].includes(e.key)) {
+      if (["ArrowUp", "ArrowDown", "ArrowLeft", "ArrowRight", "w", "a", "s", "d"].includes(e.key)) {
         e.preventDefault();
       }
       if (status !== "playing") return;
@@ -623,16 +623,30 @@ function Navbar({ active, dark, toggleDark, t }) {
 
 // ── Hero ──────────────────────────────────────────────────────────────
 function HeroSection({ t }) {
+  const [typedGreeting, setTypedGreeting] = useState("");
   const [typed, setTyped] = useState("");
+  const greetingText = "HI, I'M";
   const fullText = "Web Developer & Data Analyst";
+
   useEffect(() => {
+    let i = 0;
+    const iv = setInterval(() => {
+      if (i <= greetingText.length) { setTypedGreeting(greetingText.slice(0, i)); i++; }
+      else clearInterval(iv);
+    }, 100);
+    return () => clearInterval(iv);
+  }, []);
+
+  useEffect(() => {
+    if (typedGreeting.length < greetingText.length) return;
     let i = 0;
     const iv = setInterval(() => {
       if (i <= fullText.length) { setTyped(fullText.slice(0, i)); i++; }
       else clearInterval(iv);
     }, 60);
     return () => clearInterval(iv);
-  }, []);
+  }, [typedGreeting]);
+
 
   return (
     <section id="home" style={{ background: t.body, transition: "background 0.4s ease" }} className="min-h-screen pt-16 flex items-center">
@@ -645,13 +659,13 @@ function HeroSection({ t }) {
               </div>
             </Reveal>
             <Reveal direction="left" delay={100}>
-              <h1 style={{ color: t.text, transition: "color 0.4s ease" }} className="font-black text-7xl md:text-9xl leading-none tracking-tighter mb-4 uppercase">
-                AHMAD
+              <h1 style={{ color: t.text, transition: "color 0.4s ease" }} className="font-black text-4xl md:text-5xl leading-none tracking-tighter mb-4 uppercase font-mono">
+                {typedGreeting}<span className="animate-pulse">|</span>
               </h1>
             </Reveal>
             <Reveal direction="left" delay={150}>
-              <p style={{ color: t.textMuted, transition: "color 0.4s ease" }} className="font-black text-lg uppercase tracking-widest mb-4 font-mono">
-                Ahmad Ikdinal
+              <p style={{ color: t.text, transition: "color 0.4s ease" }} className="font-black text-5xl md:text-8xl uppercase tracking-tighter mb-4 font-mono">
+                AHMAD IKDINAL
               </p>
             </Reveal>
             <Reveal direction="left" delay={200}>
@@ -662,9 +676,17 @@ function HeroSection({ t }) {
               </div>
             </Reveal>
             <Reveal direction="left" delay={300}>
-              <p style={{ color: t.textMuted, borderLeft: `4px solid ${t.border}`, transition: "color 0.4s ease, border-color 0.4s ease" }} className="text-lg font-bold max-w-lg mb-8 pl-4">
-                I build functional, high-performance web applications and data-driven solutions — from Laravel backends to Python ML pipelines and Flutter mobile apps.
-              </p>
+             <div style={{ 
+                background: t.card, 
+                border: `4px solid ${t.border}`, 
+                boxShadow: `8px 8px 0 0 ${t.shadow}`,
+                borderLeft: `4px solid #000000`,
+                transition: "all 0.4s ease" 
+              }} className="max-w-lg mb-8 p-5">
+                <p style={{ color: t.textMuted }} className="text-lg font-bold">
+                  Information Technology student at Brawijaya University with a passion for Data Science, AI, and IoT. Experienced in building high-performance web applications and data-driven solutions — from Laravel backends and React/Next.js frontends to Python pipelines — with a strong drive to grow and contribute professionally.
+                </p>
+              </div>
             </Reveal>
             <Reveal direction="up" delay={400}>
               <div className="flex flex-wrap gap-4 items-start">
@@ -703,7 +725,7 @@ function HeroSection({ t }) {
                 <div style={{ background: "#FF6B6B", border: `4px solid ${t.border}`, boxShadow: `12px 12px 0 0 ${t.shadow}` }} className="absolute inset-0 translate-x-4 translate-y-4"></div>
                 <div style={{ background: "#61DAFB", border: `4px solid ${t.border}`, boxShadow: `12px 12px 0 0 ${t.shadow}` }} className="absolute inset-0 translate-x-2 translate-y-2"></div>
                 <div style={{ background: t.card, border: `4px solid ${t.border}`, boxShadow: `12px 12px 0 0 ${t.shadow}`, transition: "all 0.4s ease" }} className="relative w-full h-full overflow-hidden">
-                  <img src="https://api.dicebear.com/9.x/pixel-art/svg?seed=AhmadIkdinal&backgroundColor=b6e3f4&hair=short01&accessories=roundGlasses" alt="Ahmad Ikdinal Avatar" className="w-full h-full object-cover" />
+                  <img src="/foto.jpg" alt="Ahmad Ikdinal" className="w-full h-full object-cover" />
                 </div>
                 <div style={{ background: t.body, border: `4px solid ${t.border}`, color: t.text, boxShadow: `6px 6px 0 0 ${t.shadow}`, transition: "all 0.4s ease" }} className="absolute -bottom-4 -right-4 px-4 py-3">
                   <p className="font-black text-sm uppercase tracking-widest">@loma09</p>
@@ -715,8 +737,8 @@ function HeroSection({ t }) {
 
         <div className="mt-20 grid grid-cols-2 md:grid-cols-4 gap-4">
           {[
-            { num: "9+",   label: "Repositories" },
-            { num: "6",    label: "Core Skills" },
+            { num: "9+", label: "Repositories" },
+            { num: "6", label: "Core Skills" },
             { num: "3.89", label: "GPA" },
             { num: "Open", label: "To Hire" },
           ].map((s, i) => (
@@ -791,7 +813,7 @@ function ProjectsSection({ t }) {
           <a href="https://github.com/loma09" target="_blank" rel="noopener noreferrer"
             style={{ color: t.textMuted, borderBottom: `2px solid ${t.border}`, transition: "color 0.4s" }}
             className="inline-block font-bold font-mono text-sm mb-10 hover:opacity-70">
-            github.com/loma09 → 9 repositories
+            github.com/loma09
           </a>
         </Reveal>
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
@@ -932,7 +954,7 @@ function ContactSection({ t }) {
                   </div>
                   <button type="submit" disabled={status === "sending"}
                     style={{ background: t.text, color: t.body, border: `4px solid ${t.border}`, boxShadow: `8px 8px 0 0 ${t.shadowHero}`, transition: "all 0.15s ease", opacity: status === "sending" ? 0.7 : 1, cursor: status === "sending" ? "wait" : "pointer" }}
-                    onMouseEnter={e => { if (status !== "sending") { e.currentTarget.style.transform = "translate(4px,4px)"; e.currentTarget.style.boxShadow = `4px 4px 0 0 ${t.shadowHero}`; }}}
+                    onMouseEnter={e => { if (status !== "sending") { e.currentTarget.style.transform = "translate(4px,4px)"; e.currentTarget.style.boxShadow = `4px 4px 0 0 ${t.shadowHero}`; } }}
                     onMouseLeave={e => { e.currentTarget.style.transform = "none"; e.currentTarget.style.boxShadow = `8px 8px 0 0 ${t.shadowHero}`; }}
                     className="font-black uppercase tracking-widest text-base px-8 py-4">
                     {status === "sending" ? "Sending..." : "Send Message →"}
@@ -1036,14 +1058,14 @@ export default function Portfolio() {
   const toggleDark = useCallback(() => {
     setDark(d => {
       const next = !d;
-      try { localStorage.setItem("portfolio-dark", String(next)); } catch (e) {}
+      try { localStorage.setItem("portfolio-dark", String(next)); } catch (e) { }
       return next;
     });
   }, []);
 
   // FIX 4: onDone set showContent=true dan simpan flag — konten TIDAK pernah menghilang
   const handleLoadingDone = useCallback(() => {
-    try { sessionStorage.setItem("portfolio-loaded", "1"); } catch (e) {}
+    try { sessionStorage.setItem("portfolio-loaded", "1"); } catch (e) { }
     setShowContent(true);
     setShowLoading(false);
   }, []);
