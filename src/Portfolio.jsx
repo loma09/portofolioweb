@@ -679,12 +679,12 @@ function HeroSection({ t }) {
               <div style={{
                 background: t.card,
                 border: `4px solid ${t.border}`,
-                boxShadow: `8px 8px 0 0 ${t.shadow}`,
-                borderLeft: `8px solid #FF6B6B`,
+                boxShadow: `10px 10px 0 0 ${t.shadow}`,
+                borderLeft: `4px solid #000000`,
                 transition: "all 0.4s ease"
               }} className="max-w-lg mb-8 p-5">
                 <p style={{ color: t.textMuted }} className="text-lg font-bold">
-                  A D3 Information Technology student at Universitas Brawijaya with a passion for Data Science, AI, and IoT. Experienced in building high-performance web applications and data-driven solutions — from Laravel backends and React/Next.js frontends to Python pipelines — with a strong drive to grow and contribute professionally.
+                  Information Technology student at Brawijaya University with a passion for Data Science, AI, and IoT. Experienced in building high-performance web applications and data-driven solutions — from Laravel backends and React/Next.js frontends to Python pipelines — with a strong drive to grow and contribute professionally.
                 </p>
               </div>
             </Reveal>
@@ -987,7 +987,7 @@ function ContactSection({ t }) {
                 <h3 style={{ color: t.text }} className="font-black text-xl uppercase tracking-tight mb-5">Find Me Online</h3>
                 <div className="flex flex-col gap-4">
                   {[
-                    { label: "GitHub", sub: "@loma09 — 9 Repositories", bg: "#24292e", icon: "https://cdn.jsdelivr.net/gh/devicons/devicon/icons/github/github-original.svg", href: "https://github.com/loma09" },
+                    { label: "GitHub", sub: "@loma09", bg: "#24292e", icon: "https://cdn.jsdelivr.net/gh/devicons/devicon/icons/github/github-original.svg", href: "https://github.com/loma09" },
                     { label: "LinkedIn", sub: "Ahmad Ikdinal", bg: "#0077B5", icon: "https://cdn.jsdelivr.net/gh/devicons/devicon/icons/linkedin/linkedin-original.svg", href: "https://www.linkedin.com/in/ahmad-ikdinal-5aa688263/" },
                   ].map((social) => (
                     <a key={social.label} href={social.href} target="_blank" rel="noopener noreferrer"
