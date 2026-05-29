@@ -480,7 +480,7 @@ function HeroSection({ t }) {
               </p>
             </Reveal>
             <Reveal direction="up" delay={400}>
-              <div className="flex flex-wrap gap-4">
+              <div className="flex flex-col sm:flex-row gap-4">
                 <button
                   onClick={() => document.getElementById("contact").scrollIntoView({ behavior: "smooth" })}
                   style={{ background: t.text, color: t.body, border: `4px solid ${t.border}`, boxShadow: `8px 8px 0 0 ${t.shadowHero}`, transition: "all 0.4s ease" }}
@@ -489,21 +489,23 @@ function HeroSection({ t }) {
                   className="font-black uppercase tracking-widest text-base px-8 py-4 cursor-pointer">
                   Hire Me →
                 </button>
-                <a href="/CV_Ahmad_Ikdinal.pdf" download="CV_Ahmad_Ikdinal.pdf"
-                  style={{ background: "#A8FF78", color: "#000", border: `4px solid ${t.border}`, boxShadow: `8px 8px 0 0 ${t.shadow}`, transition: "all 0.4s ease" }}
-                  onMouseEnter={e => { e.currentTarget.style.transform = "translate(4px,4px)"; e.currentTarget.style.boxShadow = `4px 4px 0 0 ${t.shadow}`; }}
-                  onMouseLeave={e => { e.currentTarget.style.transform = "none"; e.currentTarget.style.boxShadow = `8px 8px 0 0 ${t.shadow}`; }}
-                  className="font-black uppercase tracking-widest text-base px-8 py-4 cursor-pointer flex items-center gap-2">
-                  ↓ Download CV
-                </a>
+                <div className="flex gap-4">
+                  <a href="/CV_Ahmad_Ikdinal.pdf" download="CV_Ahmad_Ikdinal.pdf"
+                    style={{ background: "#A8FF78", color: "#000", border: `4px solid ${t.border}`, boxShadow: `8px 8px 0 0 ${t.shadow}`, transition: "all 0.4s ease" }}
+                    onMouseEnter={e => { e.currentTarget.style.transform = "translate(4px,4px)"; e.currentTarget.style.boxShadow = `4px 4px 0 0 ${t.shadow}`; }}
+                    onMouseLeave={e => { e.currentTarget.style.transform = "none"; e.currentTarget.style.boxShadow = `8px 8px 0 0 ${t.shadow}`; }}
+                    className="font-black uppercase tracking-widest text-base px-8 py-4 cursor-pointer flex items-center gap-2">
+                    ↓ Download CV
+                  </a>
                   <a href="https://github.com/loma09" target="_blank" rel="noopener noreferrer"
-                  style={{ background: t.body, color: t.text, border: `4px solid ${t.border}`, boxShadow: `8px 8px 0 0 ${t.shadow}`, transition: "all 0.4s ease" }}
-                  onMouseEnter={e => { e.currentTarget.style.transform = "translate(4px,4px)"; e.currentTarget.style.boxShadow = `4px 4px 0 0 ${t.shadow}`; }}
-                  onMouseLeave={e => { e.currentTarget.style.transform = "none"; e.currentTarget.style.boxShadow = `8px 8px 0 0 ${t.shadow}`; }}
-                  className="font-black uppercase tracking-widest text-base px-8 py-4 cursor-pointer flex items-center gap-2">
-                  <img src="https://cdn.jsdelivr.net/gh/devicons/devicon/icons/github/github-original.svg" alt="GitHub" className="w-5 h-5" />
-                  GitHub
-                </a>
+                    style={{ background: t.body, color: t.text, border: `4px solid ${t.border}`, boxShadow: `8px 8px 0 0 ${t.shadow}`, transition: "all 0.4s ease" }}
+                    onMouseEnter={e => { e.currentTarget.style.transform = "translate(4px,4px)"; e.currentTarget.style.boxShadow = `4px 4px 0 0 ${t.shadow}`; }}
+                    onMouseLeave={e => { e.currentTarget.style.transform = "none"; e.currentTarget.style.boxShadow = `8px 8px 0 0 ${t.shadow}`; }}
+                    className="font-black uppercase tracking-widest text-base px-8 py-4 cursor-pointer flex items-center gap-2">
+                    <img src="https://cdn.jsdelivr.net/gh/devicons/devicon/icons/github/github-original.svg" alt="GitHub" className="w-5 h-5" />
+                    GitHub
+                  </a>
+               </div>
               </div>
             </Reveal>
           </div>
