@@ -131,13 +131,19 @@ const THEMES = {
 };
 
 // ── Snake Game ────────────────────────────────────────────────────────
-const CELL = 24;
-const COLS = 28;
-const ROWS = 24;
 const INIT_SNAKE = [{ x: 10, y: 10 }];
 const INIT_DIR = { x: 1, y: 0 };
 
-function randomFood(snake) {
+function getGameDimensions() {
+  const mobile = window.innerWidth < 640;
+  return {
+    CELL: mobile ? 14 : 24,
+    COLS: mobile ? 22 : 28,
+    ROWS: mobile ? 22 : 24,
+  };
+}
+
+function randomFood(snake, COLS, ROWS) {
   let pos;
   do {
     pos = { x: Math.floor(Math.random() * COLS), y: Math.floor(Math.random() * ROWS) };
@@ -146,6 +152,15 @@ function randomFood(snake) {
 }
 
 function SnakeGame({ t }) {
+  const [dims, setDims] = useState(getGameDimensions);
+  const { CELL, COLS, ROWS } = dims;
+
+  useEffect(() => {
+    const handleResize = () => setDims(getGameDimensions());
+    window.addEventListener("resize", handleResize);
+    return () => window.removeEventListener("resize", handleResize);
+  }, []);
+
   const canvasRef = useRef(null);
   const [status, setStatus] = useState("idle");
   const [score, setScore] = useState(0);
@@ -197,13 +212,13 @@ function SnakeGame({ t }) {
 
   const spawnBonus = useCallback(() => {
     if (bonusFood.current) return;
-    bonusFood.current = randomFood([...snake.current, food.current]);
+    bonusFood.current = randomFood([...snake.current, food.current], COLS, ROWS);
     setBonusActive(true);
     bonusTimer.current = setTimeout(() => {
       bonusFood.current = null;
       setBonusActive(false);
     }, 5000);
-  }, []);
+  }, [COLS, ROWS]);
 
   const draw = useCallback(() => {
     const canvas = canvasRef.current;
@@ -243,7 +258,7 @@ function SnakeGame({ t }) {
       ctx.fillRect(seg.x * CELL + 1, seg.y * CELL + 1, CELL - 2, CELL - 2);
       ctx.strokeRect(seg.x * CELL + 1, seg.y * CELL + 1, CELL - 2, CELL - 2);
     });
-  }, []);
+  }, [CELL, COLS, ROWS]);
 
   const tick = useCallback(() => {
     dir.current = nextDir.current;
@@ -266,7 +281,7 @@ function SnakeGame({ t }) {
       playSound("move");
     } else {
       if (ate) {
-        food.current = randomFood(newSnake);
+        food.current = randomFood(newSnake, COLS, ROWS);
         scoreRef.current += 10;
         setScore(scoreRef.current);
         if (scoreRef.current % 30 === 0) spawnBonus();
@@ -283,13 +298,13 @@ function SnakeGame({ t }) {
     }
     snake.current = newSnake;
     draw();
-  }, [draw, spawnBonus, playSound]);
+  }, [draw, spawnBonus, playSound, COLS, ROWS]);
 
   const startGame = useCallback(() => {
     snake.current = [{ x: 10, y: 10 }];
     dir.current = { x: 1, y: 0 };
     nextDir.current = { x: 1, y: 0 };
-    food.current = randomFood(snake.current);
+    food.current = randomFood(snake.current, COLS, ROWS);
     bonusFood.current = null;
     setBonusActive(false);
     clearTimeout(bonusTimer.current);
@@ -299,7 +314,7 @@ function SnakeGame({ t }) {
     clearInterval(gameLoop.current);
     gameLoop.current = setInterval(tick, 120);
     draw();
-  }, [tick, draw]);
+  }, [tick, draw, COLS, ROWS]);
 
   const togglePause = useCallback(() => {
     if (status === "playing") {
@@ -374,14 +389,15 @@ function SnakeGame({ t }) {
         </Reveal>
         <Reveal direction="up" delay={100}>
           <div className="flex flex-col lg:flex-row gap-8 items-start">
-            <div style={{ border: "4px solid #F4DF4E", boxShadow: "8px 8px 0 0 rgba(244,223,78,0.5)", position: "relative" }}>
+            {/* Canvas */}
+            <div style={{ border: "4px solid #F4DF4E", boxShadow: "8px 8px 0 0 rgba(244,223,78,0.5)", position: "relative", flexShrink: 0 }}>
               <canvas
                 ref={canvasRef}
                 width={COLS * CELL}
                 height={ROWS * CELL}
                 onTouchStart={handleTouchStart}
                 onTouchEnd={handleTouchEnd}
-                style={{ display: "block" }}
+                style={{ display: "block", maxWidth: "100%" }}
               />
               {status !== "playing" && (
                 <div style={{ position: "absolute", inset: 0, background: "rgba(0,0,0,0.85)", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: "16px" }}>
@@ -408,7 +424,9 @@ function SnakeGame({ t }) {
                 </div>
               )}
             </div>
-            <div className="flex flex-col gap-4" style={{ minWidth: "200px" }}>
+
+            {/* Sidebar */}
+            <div className="flex flex-col gap-4 w-full lg:w-auto" style={{ minWidth: "200px" }}>
               <div style={{ background: "#1e1e1e", border: "4px solid #F4DF4E", boxShadow: "6px 6px 0 0 rgba(244,223,78,0.5)", padding: "20px" }}>
                 <p className="font-black text-xs uppercase tracking-widest mb-1" style={{ color: "#aaa" }}>Score</p>
                 <p className="font-black text-4xl" style={{ color: "#F4DF4E" }}>{score}</p>
@@ -457,8 +475,7 @@ function SnakeGame({ t }) {
   );
 }
 
-// ── Loading Screen — FIXED ────────────────────────────────────────────
-// PERUBAHAN: Hapus document.body.style.overflow, ganti done+visible jadi fadeOut saja
+// ── Loading Screen ────────────────────────────────────────────────────
 function LoadingScreen({ onDone }) {
   const [lines, setLines] = useState([]);
   const [progress, setProgress] = useState(0);
@@ -475,38 +492,27 @@ function LoadingScreen({ onDone }) {
   ];
 
   useEffect(() => {
-    // Reset state on each effect run (fixes React 19 StrictMode double-mount)
     setLines([]);
     setProgress(0);
     setFadeOut(false);
-
     let lineIndex = 0;
     let done = false;
     const interval = setInterval(() => {
       if (done) return;
       if (lineIndex < sequence.length) {
-        const currentLine = sequence[lineIndex];
         lineIndex++;
-        setLines(prev => {
-          // Rebuild from scratch to avoid stale/duplicate entries
-          const next = sequence.slice(0, lineIndex);
-          return next;
-        });
+        setLines(sequence.slice(0, lineIndex));
         setProgress(Math.round((lineIndex / sequence.length) * 100));
       } else {
         done = true;
         clearInterval(interval);
         setTimeout(() => {
           setFadeOut(true);
-          // Wait for fade animation to finish then call onDone
           setTimeout(() => onDone(), 600);
         }, 400);
       }
     }, 300);
-    return () => {
-      done = true;
-      clearInterval(interval);
-    };
+    return () => { done = true; clearInterval(interval); };
   }, []);
 
   return (
@@ -520,12 +526,8 @@ function LoadingScreen({ onDone }) {
     }}>
       <div style={{ width: "min(600px, 90vw)" }}>
         <div style={{ borderBottom: "2px solid #F4DF4E", paddingBottom: "12px", marginBottom: "24px" }}>
-          <p style={{ color: "#F4DF4E", fontWeight: "900", fontSize: "20px", letterSpacing: "4px" }}>
-            PORTFOLIO.EXE
-          </p>
-          <p style={{ color: "#555", fontSize: "12px", marginTop: "4px" }}>
-            Ahmad Ikdinal — Personal Portfolio System v1.0
-          </p>
+          <p style={{ color: "#F4DF4E", fontWeight: "900", fontSize: "20px", letterSpacing: "4px" }}>PORTFOLIO.EXE</p>
+          <p style={{ color: "#555", fontSize: "12px", marginTop: "4px" }}>Ahmad Ikdinal — Personal Portfolio System v1.0</p>
         </div>
         <div style={{ minHeight: "200px", marginBottom: "24px" }}>
           {lines.map((line, i) => (
@@ -545,9 +547,7 @@ function LoadingScreen({ onDone }) {
           <span style={{
             position: "absolute", inset: 0, display: "flex", alignItems: "center", justifyContent: "center",
             color: progress > 50 ? "#000" : "#F4DF4E", fontWeight: "900", fontSize: "12px", letterSpacing: "2px",
-          }}>
-            {progress}%
-          </span>
+          }}>{progress}%</span>
         </div>
         <p style={{ color: "#555", fontSize: "11px", letterSpacing: "2px" }}>
           [{Array(Math.floor(progress / 5)).fill("█").join("")}{Array(20 - Math.floor(progress / 5)).fill("░").join("")}]
@@ -647,7 +647,6 @@ function HeroSection({ t }) {
     return () => clearInterval(iv);
   }, [typedGreeting]);
 
-
   return (
     <section id="home" style={{ background: t.body, transition: "background 0.4s ease" }} className="min-h-screen pt-16 flex items-center">
       <div className="max-w-6xl mx-auto px-4 py-20 w-full">
@@ -659,12 +658,13 @@ function HeroSection({ t }) {
               </div>
             </Reveal>
             <Reveal direction="left" delay={100}>
-              <h1 style={{ color: t.text, transition: "color 0.4s ease" }} className="font-black text-4xl md:text-5xl leading-none tracking-tighter mb-4 uppercase font-mono">
-                {typedGreeting}<span className="animate-pulse">|</span>
+              <h1 style={{ color: t.text, transition: "color 0.4s ease" }} className="font-black text-4xl md:text-5xl leading-none tracking-tighter mb-2 uppercase font-mono">
+                {typedGreeting}
+                <span style={{ opacity: typedGreeting.length < greetingText.length ? 1 : 0 }} className="animate-pulse">|</span>
               </h1>
             </Reveal>
             <Reveal direction="left" delay={150}>
-              <p style={{ color: t.text, transition: "color 0.4s ease" }} className="font-black text-5xl md:text-8xl uppercase tracking-tighter mb-4 font-mono">
+              <p style={{ color: t.text, transition: "color 0.4s ease" }} className="font-black text-4xl md:text-7xl lg:text-8xl uppercase tracking-tighter mb-4 font-mono">
                 AHMAD IKDINAL
               </p>
             </Reveal>
@@ -676,15 +676,15 @@ function HeroSection({ t }) {
               </div>
             </Reveal>
             <Reveal direction="left" delay={300}>
-             <div style={{ 
-                background: t.card, 
-                border: `4px solid ${t.border}`, 
+              <div style={{
+                background: t.card,
+                border: `4px solid ${t.border}`,
                 boxShadow: `8px 8px 0 0 ${t.shadow}`,
-                borderLeft: `4px solid #000000`,
-                transition: "all 0.4s ease" 
+                borderLeft: `8px solid #FF6B6B`,
+                transition: "all 0.4s ease"
               }} className="max-w-lg mb-8 p-5">
                 <p style={{ color: t.textMuted }} className="text-lg font-bold">
-                  Information Technology student at Brawijaya University with a passion for Data Science, AI, and IoT. Experienced in building high-performance web applications and data-driven solutions — from Laravel backends and React/Next.js frontends to Python pipelines — with a strong drive to grow and contribute professionally.
+                  A D3 Information Technology student at Universitas Brawijaya with a passion for Data Science, AI, and IoT. Experienced in building high-performance web applications and data-driven solutions — from Laravel backends and React/Next.js frontends to Python pipelines — with a strong drive to grow and contribute professionally.
                 </p>
               </div>
             </Reveal>
@@ -1035,23 +1035,17 @@ function Footer({ t }) {
   );
 }
 
-// ── Portfolio Root — FIXED ────────────────────────────────────────────
+// ── Portfolio Root ────────────────────────────────────────────────────
 export default function Portfolio() {
-  // FIX 1: Baca dark mode dari localStorage dengan lazy initializer (aman, tidak error saat SSR)
   const [dark, setDark] = useState(() => {
     try { return localStorage.getItem("portfolio-dark") === "true"; } catch (e) { return false; }
   });
-
-  // FIX 2: showLoading hanya true jika belum pernah visit di session ini
   const [showLoading, setShowLoading] = useState(() => {
     try { return !sessionStorage.getItem("portfolio-loaded"); } catch (e) { return true; }
   });
-
-  // FIX 3: showContent langsung true kalau sudah pernah visit (tidak perlu loading lagi)
   const [showContent, setShowContent] = useState(() => {
     try { return !!sessionStorage.getItem("portfolio-loaded"); } catch (e) { return false; }
   });
-
   const [activeSection, setActiveSection] = useState("home");
   const t = dark ? THEMES.dark : THEMES.light;
 
@@ -1063,7 +1057,6 @@ export default function Portfolio() {
     });
   }, []);
 
-  // FIX 4: onDone set showContent=true dan simpan flag — konten TIDAK pernah menghilang
   const handleLoadingDone = useCallback(() => {
     try { sessionStorage.setItem("portfolio-loaded", "1"); } catch (e) { }
     setShowContent(true);
@@ -1088,14 +1081,7 @@ export default function Portfolio() {
 
   return (
     <>
-      {/* Loading screen hanya render kalau showLoading = true */}
       {showLoading && <LoadingScreen onDone={handleLoadingDone} />}
-
-      {/*
-        FIX UTAMA: Konten selalu dirender di DOM.
-        Pakai visibility:hidden (bukan conditional render / display:none)
-        supaya tidak pernah ada halaman kosong.
-      */}
       <div style={{
         background: t.body,
         fontFamily: "'Courier New', Courier, monospace",
