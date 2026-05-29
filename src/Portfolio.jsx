@@ -458,6 +458,92 @@ function SnakeGame({ t }) {
   );
 }
 
+function LoadingScreen({ onDone, visible }) {
+  const [lines, setLines] = useState([]);
+  const [progress, setProgress] = useState(0);
+  const [done, setDone] = useState(false);
+
+  const sequence = [
+    "> INITIALIZING PORTFOLIO.EXE...",
+    "> LOADING SKILLS MODULE........OK",
+    "> LOADING PROJECTS MODULE......OK",
+    "> LOADING SNAKE GAME...........OK",
+    "> ESTABLISHING CONNECTION......OK",
+    "> ALL SYSTEMS READY.",
+    "> WELCOME, VISITOR.",
+  ];
+
+  useEffect(() => {
+    document.body.style.overflow = "hidden";
+    let lineIndex = 0;
+    const interval = setInterval(() => {
+      if (lineIndex < sequence.length) {
+        setLines(prev => [...prev, sequence[lineIndex]]);
+        lineIndex++;
+        setProgress(Math.round((lineIndex / sequence.length) * 100));
+      } else {
+        clearInterval(interval);
+        setTimeout(() => {
+          setDone(true);
+          document.body.style.overflow = "";
+          setTimeout(() => onDone(), 500);
+        }, 400);
+      }
+    }, 300);
+    return () => { clearInterval(interval); document.body.style.overflow = ""; };
+  }, []);
+
+  if (!visible && done) return null;
+
+  return (
+    <div style={{
+      position: "fixed", inset: 0, background: "#000", zIndex: 9999,
+      display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center",
+      fontFamily: "'Courier New', Courier, monospace",
+      opacity: done ? 0 : 1,
+      transition: "opacity 0.5s ease",
+      pointerEvents: done ? "none" : "all",
+    }}>
+      <div style={{ width: "min(600px, 90vw)" }}>
+        <div style={{ borderBottom: "2px solid #F4DF4E", paddingBottom: "12px", marginBottom: "24px" }}>
+          <p style={{ color: "#F4DF4E", fontWeight: "900", fontSize: "20px", letterSpacing: "4px" }}>
+            PORTFOLIO.EXE
+          </p>
+          <p style={{ color: "#555", fontSize: "12px", marginTop: "4px" }}>
+            Ahmad Ikdinal — Personal Portfolio System v1.0
+          </p>
+        </div>
+        <div style={{ minHeight: "200px", marginBottom: "24px" }}>
+          {lines.map((line, i) => (
+            <p key={i} style={{
+              color: line.includes("OK") ? "#A8FF78" : line.includes("WELCOME") ? "#F4DF4E" : "#e8dfc0",
+              fontSize: "13px", marginBottom: "6px", letterSpacing: "1px",
+            }}>
+              {line}
+              {i === lines.length - 1 && !done && (
+                <span style={{ color: "#F4DF4E", animation: "blink 1s infinite" }}>█</span>
+              )}
+            </p>
+          ))}
+        </div>
+        <div style={{ border: "2px solid #333", height: "24px", position: "relative", marginBottom: "8px" }}>
+          <div style={{ background: "#F4DF4E", height: "100%", width: `${progress}%`, transition: "width 0.3s ease" }} />
+          <span style={{
+            position: "absolute", inset: 0, display: "flex", alignItems: "center", justifyContent: "center",
+            color: progress > 50 ? "#000" : "#F4DF4E", fontWeight: "900", fontSize: "12px", letterSpacing: "2px",
+          }}>
+            {progress}%
+          </span>
+        </div>
+        <p style={{ color: "#555", fontSize: "11px", letterSpacing: "2px" }}>
+          [{Array(Math.floor(progress / 5)).fill("█").join("")}{Array(20 - Math.floor(progress / 5)).fill("░").join("")}]
+        </p>
+      </div>
+      <style>{`@keyframes blink { 0%,100%{opacity:1} 50%{opacity:0} }`}</style>
+    </div>
+  );
+}
+
 // ── Navbar ────────────────────────────────────────────────────────────
 function Navbar({ active, dark, toggleDark, t }) {
   const [menuOpen, setMenuOpen] = useState(false);
@@ -917,6 +1003,7 @@ export default function Portfolio() {
   const [dark, setDark] = useState(false);
   const [activeSection, setActiveSection] = useState("home");
   const t = dark ? THEMES.dark : THEMES.light;
+  const [loading, setLoading] = useState(true);
   const toggleDark = useCallback(() => setDark((d) => !d), []);
 
   useEffect(() => {
@@ -944,6 +1031,7 @@ export default function Portfolio() {
 
   return (
     <div style={{ background: t.body, transition: "background 0.4s ease", fontFamily: "'Courier New', Courier, monospace" }}>
+      <LoadingScreen onDone={() => setLoading(false)} visible={loading} />
       <Navbar active={activeSection} dark={dark} toggleDark={toggleDark} t={t} />
       <HeroSection t={t} />
       <SkillsSection t={t} dark={dark} />
