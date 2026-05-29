@@ -1,4 +1,4 @@
-cat > /mnt/user-data/outputs/Portfolio.jsx << 'ENDOFFILE'
+
 import { useState, useEffect, useRef, useCallback } from "react";
 import emailjs from "@emailjs/browser";
 
