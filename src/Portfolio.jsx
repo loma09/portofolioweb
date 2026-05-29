@@ -1,0 +1,634 @@
+import { useState, useEffect, useRef, useCallback } from "react";
+import emailjs from "@emailjs/browser";
+
+// ── EmailJS Config ────────────────────────────────────────────────────
+const EMAILJS_SERVICE_ID  = "service_4xno1ig";
+const EMAILJS_TEMPLATE_ID = "template_soff31y";
+const EMAILJS_PUBLIC_KEY  = "lMOX0_atzJYRfoyFp";
+
+// ── Scroll-reveal hook ───────────────────────────────────────────────
+function useReveal(options = {}) {
+  const ref = useRef(null);
+  const [visible, setVisible] = useState(false);
+  useEffect(() => {
+    const el = ref.current;
+    if (!el) return;
+    const obs = new IntersectionObserver(
+      ([entry]) => { if (entry.isIntersecting) { setVisible(true); obs.disconnect(); } },
+      { threshold: 0.12, ...options }
+    );
+    obs.observe(el);
+    return () => obs.disconnect();
+  }, []);
+  return [ref, visible];
+}
+
+function Reveal({ children, delay = 0, direction = "up", className = "" }) {
+  const [ref, visible] = useReveal();
+  const transforms = {
+    up: "translateY(40px)", down: "translateY(-40px)",
+    left: "translateX(-40px)", right: "translateX(40px)", none: "scale(0.95)",
+  };
+  return (
+    <div ref={ref} className={className} style={{
+      opacity: visible ? 1 : 0,
+      transform: visible ? "none" : transforms[direction],
+      transition: `opacity 0.6s ease ${delay}ms, transform 0.6s cubic-bezier(0.16,1,0.3,1) ${delay}ms`,
+      willChange: "opacity, transform",
+    }}>
+      {children}
+    </div>
+  );
+}
+
+// ── Data ─────────────────────────────────────────────────────────────
+const NAV_LINKS = ["Home", "Skills", "Projects", "Contact"];
+
+const SKILLS = [
+  { name: "Laravel",      accent: "#FF6B6B", icon: "https://cdn.jsdelivr.net/gh/devicons/devicon/icons/laravel/laravel-original.svg" },
+  { name: "React",        accent: "#61DAFB", icon: "https://cdn.jsdelivr.net/gh/devicons/devicon/icons/react/react-original.svg" },
+  { name: "Next.js",      accent: "#e5e5e5", icon: "https://cdn.jsdelivr.net/gh/devicons/devicon/icons/nextjs/nextjs-original.svg" },
+  { name: "Python",       accent: "#4B8BBE", icon: "https://cdn.jsdelivr.net/gh/devicons/devicon/icons/python/python-original.svg" },
+  { name: "SQL",          accent: "#F29111", icon: "https://cdn.jsdelivr.net/gh/devicons/devicon/icons/mysql/mysql-original.svg" },
+  { name: "Tailwind CSS", accent: "#38BDF8", icon: "https://cdn.jsdelivr.net/gh/devicons/devicon/icons/tailwindcss/tailwindcss-original.svg" },
+];
+
+const PROJECTS = [
+  {
+    title: "Laundry App",
+    description: "Full-stack laundry management system built with Laravel & Tailwind CSS. Handles customer transactions, order tracking, and operational workflows with a clean Blade-powered UI.",
+    tags: ["Laravel", "Tailwind CSS", "SQL"],
+    mockupBg: "#1a0a2e", accentBar: "#FF6B6B",
+    lang: "PHP / Blade", langColor: "#FF6B6B",
+    link: "https://github.com/loma09/laundry-app",
+  },
+  {
+    title: "Credit Risk Prediction",
+    description: "ML pipeline on 466K+ LendingClub records. Trained Logistic Regression & Random Forest models — Random Forest achieved 91.2% ROC-AUC and 85.4% accuracy for predicting loan default risk.",
+    tags: ["Python", "SQL"],
+    mockupBg: "#0a1a2e", accentBar: "#4B8BBE",
+    lang: "Python / Jupyter", langColor: "#F4DF4E",
+    link: "https://github.com/loma09/credit-risk-prediction",
+  },
+  {
+    title: "Flutter Ludo Fun",
+    description: "Cross-platform classic Ludo board game built with Flutter & Dart. Runs on Android, iOS, Web, Windows, macOS, and Linux with smooth animations and engaging multiplayer gameplay.",
+    tags: ["Flutter", "Dart"],
+    mockupBg: "#0a2e1a", accentBar: "#A8FF78",
+    lang: "Dart / Flutter", langColor: "#61DAFB",
+    link: "https://github.com/loma09/Flutter-Ludo-Fun",
+  },
+];
+
+const TAG_COLORS = {
+  Laravel: "#FF6B6B", React: "#61DAFB", "Next.js": "#e5e5e5",
+  Python: "#4B8BBE", SQL: "#F29111", "Tailwind CSS": "#38BDF8",
+  Flutter: "#54C5F8", Dart: "#00B4AB",
+};
+
+// ── Theme tokens ──────────────────────────────────────────────────────
+const THEMES = {
+  light: {
+    body: "#F4DF4E", card: "#ffffff", border: "#000000", text: "#000000",
+    textMuted: "#444444", navBg: "#F4DF4E", skillsBg: "#000000",
+    skillsText: "#ffffff", projectsBg: "#F4DF4E", contactBg: "#FF6B6B",
+    footerBg: "#000000", footerText: "#F4DF4E",
+    shadow: "rgba(0,0,0,1)", shadowHero: "rgba(255,107,107,1)",
+    shadowYellow: "rgba(244,223,78,1)", inputBg: "#F4DF4E",
+    toggleBg: "#000000", toggleText: "#F4DF4E",
+  },
+  dark: {
+    body: "#111111", card: "#1e1e1e", border: "#F4DF4E", text: "#F4DF4E",
+    textMuted: "#aaaaaa", navBg: "#111111", skillsBg: "#0a0a0a",
+    skillsText: "#F4DF4E", projectsBg: "#161616", contactBg: "#1a0808",
+    footerBg: "#0a0a0a", footerText: "#F4DF4E",
+    shadow: "rgba(244,223,78,0.7)", shadowHero: "rgba(244,223,78,0.5)",
+    shadowYellow: "rgba(244,223,78,0.6)", inputBg: "#2a2a2a",
+    toggleBg: "#F4DF4E", toggleText: "#000000",
+  },
+};
+
+// ── Navbar ────────────────────────────────────────────────────────────
+function Navbar({ active, dark, toggleDark, t }) {
+  const [menuOpen, setMenuOpen] = useState(false);
+  const [scrolled, setScrolled] = useState(false);
+  useEffect(() => {
+    const fn = () => setScrolled(window.scrollY > 10);
+    window.addEventListener("scroll", fn);
+    return () => window.removeEventListener("scroll", fn);
+  }, []);
+  const scrollTo = (id) => {
+    document.getElementById(id.toLowerCase())?.scrollIntoView({ behavior: "smooth" });
+    setMenuOpen(false);
+  };
+  const btnShadow = (isActive) => isActive ? "none" : `4px 4px 0 0 ${t.shadow}`;
+  const btnTransform = (isActive) => isActive ? "translate(2px,2px)" : "none";
+
+  return (
+    <nav style={{ background: t.navBg, borderBottom: `4px solid ${t.border}`, boxShadow: scrolled ? `0 4px 0 0 ${t.shadow}` : "none", transition: "all 0.4s ease" }} className="fixed top-0 left-0 w-full z-50">
+      <div className="max-w-6xl mx-auto px-4 flex items-center justify-between h-16">
+        <div style={{ background: t.text, color: t.body, border: `4px solid ${t.border}`, boxShadow: `4px 4px 0 0 ${t.shadow}`, transition: "all 0.4s ease" }} className="font-black text-xl tracking-tighter font-mono px-3 py-1">
+          PORTFOLIO.EXE
+        </div>
+        <div className="hidden md:flex items-center gap-2">
+          {NAV_LINKS.map((link) => {
+            const isActive = active === link.toLowerCase();
+            return (
+              <button key={link} onClick={() => scrollTo(link)}
+                style={{ background: isActive ? t.text : t.card, color: isActive ? t.body : t.text, border: `4px solid ${t.border}`, boxShadow: btnShadow(isActive), transform: btnTransform(isActive), transition: "all 0.15s ease" }}
+                onMouseEnter={e => { if (!isActive) { e.currentTarget.style.transform = "translate(2px,2px)"; e.currentTarget.style.boxShadow = "none"; } }}
+                onMouseLeave={e => { if (!isActive) { e.currentTarget.style.transform = "none"; e.currentTarget.style.boxShadow = `4px 4px 0 0 ${t.shadow}`; } }}
+                className="font-black uppercase tracking-widest text-sm px-4 py-2 cursor-pointer">
+                {link}
+              </button>
+            );
+          })}
+          <button onClick={toggleDark}
+            style={{ background: t.toggleBg, color: t.toggleText, border: `4px solid ${t.border}`, boxShadow: `4px 4px 0 0 ${t.shadow}`, transition: "all 0.4s ease" }}
+            onMouseEnter={e => { e.currentTarget.style.transform = "translate(2px,2px)"; e.currentTarget.style.boxShadow = "none"; }}
+            onMouseLeave={e => { e.currentTarget.style.transform = "none"; e.currentTarget.style.boxShadow = `4px 4px 0 0 ${t.shadow}`; }}
+            className="font-black text-sm px-4 py-2 cursor-pointer uppercase tracking-widest ml-2">
+            {dark ? "☀ LIGHT" : "☾ DARK"}
+          </button>
+        </div>
+        <div className="md:hidden flex items-center gap-2">
+          <button onClick={toggleDark} style={{ background: t.toggleBg, color: t.toggleText, border: `4px solid ${t.border}`, boxShadow: `3px 3px 0 0 ${t.shadow}` }} className="font-black text-xs px-3 py-2 cursor-pointer">{dark ? "☀" : "☾"}</button>
+          <button style={{ background: t.card, border: `4px solid ${t.border}`, boxShadow: `4px 4px 0 0 ${t.shadow}` }} className="p-2 cursor-pointer" onClick={() => setMenuOpen(!menuOpen)}>
+            <div style={{ background: t.text }} className="w-6 h-0.5 mb-1.5"></div>
+            <div style={{ background: t.text }} className="w-6 h-0.5 mb-1.5"></div>
+            <div style={{ background: t.text }} className="w-6 h-0.5"></div>
+          </button>
+        </div>
+      </div>
+      {menuOpen && (
+        <div style={{ borderTop: `4px solid ${t.border}`, background: t.navBg }} className="md:hidden flex flex-col">
+          {NAV_LINKS.map((link) => (
+            <button key={link} onClick={() => scrollTo(link)} style={{ color: t.text, borderBottom: `4px solid ${t.border}` }} className="font-black uppercase tracking-widest text-sm px-6 py-4 text-left cursor-pointer">{link}</button>
+          ))}
+        </div>
+      )}
+    </nav>
+  );
+}
+
+// ── Hero ──────────────────────────────────────────────────────────────
+function HeroSection({ t }) {
+  const [typed, setTyped] = useState("");
+  const fullText = "Web Developer & Data Analyst";
+  useEffect(() => {
+    let i = 0;
+    const iv = setInterval(() => {
+      if (i <= fullText.length) { setTyped(fullText.slice(0, i)); i++; }
+      else clearInterval(iv);
+    }, 60);
+    return () => clearInterval(iv);
+  }, []);
+
+  return (
+    <section id="home" style={{ background: t.body, transition: "background 0.4s ease" }} className="min-h-screen pt-16 flex items-center">
+      <div className="max-w-6xl mx-auto px-4 py-20 w-full">
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 items-center">
+          <div>
+            <Reveal direction="left" delay={0}>
+              <div style={{ background: "#FF6B6B", border: `4px solid ${t.border}`, boxShadow: `4px 4px 0 0 ${t.shadow}`, color: "#000" }} className="inline-block px-4 py-2 font-black text-sm uppercase tracking-widest mb-6">
+                Available for Hire
+              </div>
+            </Reveal>
+            <Reveal direction="left" delay={100}>
+              <h1 style={{ color: t.text, transition: "color 0.4s ease" }} className="font-black text-7xl md:text-9xl leading-none tracking-tighter mb-4 uppercase">
+                AHMAD
+              </h1>
+            </Reveal>
+            <Reveal direction="left" delay={150}>
+              <p style={{ color: t.textMuted, transition: "color 0.4s ease" }} className="font-black text-lg uppercase tracking-widest mb-4 font-mono">
+                Ahmad Ikdinal
+              </p>
+            </Reveal>
+            <Reveal direction="left" delay={200}>
+              <div style={{ background: t.text, color: t.body, border: `4px solid ${t.border}`, boxShadow: `8px 8px 0 0 ${t.shadowHero}`, transition: "all 0.4s ease" }} className="px-4 py-2 inline-block mb-6">
+                <span className="font-black text-xl md:text-2xl uppercase tracking-tight font-mono">
+                  {typed}<span className="animate-pulse">|</span>
+                </span>
+              </div>
+            </Reveal>
+            <Reveal direction="left" delay={300}>
+              <p style={{ color: t.textMuted, borderLeft: `4px solid ${t.border}`, transition: "color 0.4s ease, border-color 0.4s ease" }} className="text-lg font-bold max-w-lg mb-8 pl-4">
+                I build functional, high-performance web applications and data-driven solutions — from Laravel backends to Python ML pipelines and Flutter mobile apps.
+              </p>
+            </Reveal>
+            <Reveal direction="up" delay={400}>
+              <div className="flex flex-wrap gap-4">
+                <button
+                  onClick={() => document.getElementById("contact").scrollIntoView({ behavior: "smooth" })}
+                  style={{ background: t.text, color: t.body, border: `4px solid ${t.border}`, boxShadow: `8px 8px 0 0 ${t.shadowHero}`, transition: "all 0.4s ease" }}
+                  onMouseEnter={e => { e.currentTarget.style.transform = "translate(4px,4px)"; e.currentTarget.style.boxShadow = `4px 4px 0 0 ${t.shadowHero}`; }}
+                  onMouseLeave={e => { e.currentTarget.style.transform = "none"; e.currentTarget.style.boxShadow = `8px 8px 0 0 ${t.shadowHero}`; }}
+                  className="font-black uppercase tracking-widest text-base px-8 py-4 cursor-pointer">
+                  Hire Me →
+                </button>
+                <a href="https://github.com/loma09" target="_blank" rel="noopener noreferrer"
+                  style={{ background: t.body, color: t.text, border: `4px solid ${t.border}`, boxShadow: `8px 8px 0 0 ${t.shadow}`, transition: "all 0.4s ease" }}
+                  onMouseEnter={e => { e.currentTarget.style.transform = "translate(4px,4px)"; e.currentTarget.style.boxShadow = `4px 4px 0 0 ${t.shadow}`; }}
+                  onMouseLeave={e => { e.currentTarget.style.transform = "none"; e.currentTarget.style.boxShadow = `8px 8px 0 0 ${t.shadow}`; }}
+                  className="font-black uppercase tracking-widest text-base px-8 py-4 cursor-pointer flex items-center gap-2">
+                  <img src="https://cdn.jsdelivr.net/gh/devicons/devicon/icons/github/github-original.svg" alt="GitHub" className="w-5 h-5" />
+                  GitHub
+                </a>
+              </div>
+            </Reveal>
+          </div>
+
+          <Reveal direction="right" delay={200}>
+            <div className="relative flex justify-center lg:justify-end">
+              <div className="relative w-72 h-72 md:w-96 md:h-96">
+                <div style={{ background: "#FF6B6B", border: `4px solid ${t.border}`, boxShadow: `12px 12px 0 0 ${t.shadow}` }} className="absolute inset-0 translate-x-4 translate-y-4"></div>
+                <div style={{ background: "#61DAFB", border: `4px solid ${t.border}`, boxShadow: `12px 12px 0 0 ${t.shadow}` }} className="absolute inset-0 translate-x-2 translate-y-2"></div>
+                <div style={{ background: t.card, border: `4px solid ${t.border}`, boxShadow: `12px 12px 0 0 ${t.shadow}`, transition: "all 0.4s ease" }} className="relative w-full h-full overflow-hidden">
+                  <img src="https://api.dicebear.com/9.x/pixel-art/svg?seed=AhmadIkdinal&backgroundColor=b6e3f4&hair=short01&accessories=roundGlasses" alt="Ahmad Ikdinal Avatar" className="w-full h-full object-cover" />
+                </div>
+                <div style={{ background: t.body, border: `4px solid ${t.border}`, color: t.text, boxShadow: `6px 6px 0 0 ${t.shadow}`, transition: "all 0.4s ease" }} className="absolute -bottom-4 -right-4 px-4 py-3">
+                  <p className="font-black text-sm uppercase tracking-widest">@loma09</p>
+                </div>
+              </div>
+            </div>
+          </Reveal>
+        </div>
+
+        <div className="mt-20 grid grid-cols-2 md:grid-cols-4 gap-4">
+          {[
+            { num: "9+",   label: "Repositories" },
+            { num: "6",    label: "Core Skills" },
+            { num: "3+",   label: "Languages" },
+            { num: "Open", label: "To Hire" },
+          ].map((s, i) => (
+            <Reveal key={s.label} direction="up" delay={i * 80}>
+              <div style={{ background: t.card, border: `4px solid ${t.border}`, boxShadow: `6px 6px 0 0 ${t.shadow}`, transition: "all 0.4s ease" }} className="p-4 text-center">
+                <p style={{ color: t.text }} className="font-black text-3xl">{s.num}</p>
+                <p style={{ color: t.textMuted }} className="font-bold text-sm uppercase tracking-widest">{s.label}</p>
+              </div>
+            </Reveal>
+          ))}
+        </div>
+      </div>
+    </section>
+  );
+}
+
+// ── Skills ────────────────────────────────────────────────────────────
+function SkillsSection({ t, dark }) {
+  return (
+    <section id="skills" style={{ background: t.skillsBg, transition: "background 0.4s ease" }} className="py-20">
+      <div className="max-w-6xl mx-auto px-4">
+        <Reveal direction="left">
+          <div className="mb-12">
+            <div style={{ background: "#F4DF4E", border: `4px solid #F4DF4E`, boxShadow: `4px 4px 0 0 rgba(255,255,255,0.2)`, color: "#000" }} className="inline-block px-4 py-2 font-black text-sm uppercase tracking-widest mb-4">
+              What I Work With
+            </div>
+            <h2 style={{ color: t.skillsText }} className="font-black text-5xl md:text-7xl uppercase tracking-tighter">
+              CORE<br /><span style={{ color: "#F4DF4E" }}>SKILLS_</span>
+            </h2>
+          </div>
+        </Reveal>
+        <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
+          {SKILLS.map((skill, i) => (
+            <Reveal key={skill.name} direction="up" delay={i * 80}>
+              <div
+                style={{ background: skill.accent, border: `4px solid ${dark ? "#F4DF4E" : "#000"}`, boxShadow: `8px 8px 0 0 ${dark ? "rgba(244,223,78,0.5)" : "rgba(244,223,78,0.8)"}`, transition: "all 0.15s ease", cursor: "default" }}
+                onMouseEnter={e => { e.currentTarget.style.transform = "translate(4px,4px)"; e.currentTarget.style.boxShadow = `4px 4px 0 0 ${dark ? "rgba(244,223,78,0.5)" : "rgba(244,223,78,0.8)"}`; }}
+                onMouseLeave={e => { e.currentTarget.style.transform = "none"; e.currentTarget.style.boxShadow = `8px 8px 0 0 ${dark ? "rgba(244,223,78,0.5)" : "rgba(244,223,78,0.8)"}`; }}
+                className="p-6 group">
+                <div className="flex items-start justify-between mb-4">
+                  <div style={{ background: "#fff", border: `4px solid #000`, boxShadow: `4px 4px 0 0 #000` }} className="w-14 h-14 flex items-center justify-center shrink-0">
+                    <img src={skill.icon} alt={skill.name} className="w-8 h-8 object-contain" />
+                  </div>
+                  <span className="font-black text-4xl text-black opacity-20 font-mono">{String(i + 1).padStart(2, "0")}</span>
+                </div>
+                <h3 className="font-black text-xl uppercase tracking-tight text-black">{skill.name}</h3>
+                <div className="mt-3 h-1 bg-black w-0 group-hover:w-full transition-all duration-300"></div>
+              </div>
+            </Reveal>
+          ))}
+        </div>
+      </div>
+    </section>
+  );
+}
+
+// ── Projects ──────────────────────────────────────────────────────────
+function ProjectsSection({ t }) {
+  return (
+    <section id="projects" style={{ background: t.projectsBg, transition: "background 0.4s ease" }} className="py-20">
+      <div className="max-w-6xl mx-auto px-4">
+        <Reveal direction="left">
+          <div className="mb-4">
+            <div style={{ background: t.text, color: t.body, border: `4px solid ${t.border}`, boxShadow: `4px 4px 0 0 #FF6B6B`, transition: "all 0.4s ease" }} className="inline-block px-4 py-2 font-black text-sm uppercase tracking-widest mb-4">
+              Real GitHub Projects
+            </div>
+            <h2 style={{ color: t.text, transition: "color 0.4s ease" }} className="font-black text-5xl md:text-7xl uppercase tracking-tighter">
+              SELECTED<br />
+              <span style={{ background: t.text, color: t.body, transition: "all 0.4s ease" }} className="px-2 inline-block">PROJECTS</span>
+            </h2>
+          </div>
+        </Reveal>
+        <Reveal direction="left" delay={80}>
+          <a href="https://github.com/loma09" target="_blank" rel="noopener noreferrer"
+            style={{ color: t.textMuted, borderBottom: `2px solid ${t.border}`, transition: "color 0.4s" }}
+            className="inline-block font-bold font-mono text-sm mb-10 hover:opacity-70">
+            github.com/loma09 → 9 repositories
+          </a>
+        </Reveal>
+
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+          {PROJECTS.map((project, i) => (
+            <Reveal key={project.title} direction="up" delay={i * 120}>
+              <div
+                style={{ background: t.card, border: `4px solid ${t.border}`, boxShadow: `8px 8px 0 0 ${t.shadow}`, transition: "all 0.15s ease" }}
+                onMouseEnter={e => { e.currentTarget.style.transform = "translate(4px,4px)"; e.currentTarget.style.boxShadow = `4px 4px 0 0 ${t.shadow}`; }}
+                onMouseLeave={e => { e.currentTarget.style.transform = "none"; e.currentTarget.style.boxShadow = `8px 8px 0 0 ${t.shadow}`; }}
+                className="flex flex-col h-full">
+                <div style={{ background: project.mockupBg, borderBottom: `4px solid ${t.border}` }} className="h-44 relative overflow-hidden">
+                  <div className="absolute top-0 left-0 right-0 h-8 bg-[#2a2a2a] flex items-center px-3 gap-2" style={{ borderBottom: "2px solid #000" }}>
+                    <div className="w-3 h-3 rounded-full bg-[#FF5F56] border border-black"></div>
+                    <div className="w-3 h-3 rounded-full bg-[#FFBD2E] border border-black"></div>
+                    <div className="w-3 h-3 rounded-full bg-[#27C93F] border border-black"></div>
+                    <div className="ml-2 flex-1 h-4 bg-[#444] rounded-sm border border-gray-600 flex items-center px-2">
+                      <span className="text-gray-400 text-xs font-mono truncate">github.com/loma09/{project.title.toLowerCase().replace(/\s+/g, "-")}</span>
+                    </div>
+                  </div>
+                  <div className="absolute top-10 left-0 right-0 bottom-0 p-3 flex flex-col gap-2">
+                    <div style={{ background: project.accentBar, border: "2px solid rgba(255,255,255,0.2)" }} className="h-6 w-3/4"></div>
+                    <div className="h-3 bg-gray-600 w-full opacity-50 rounded-sm"></div>
+                    <div className="h-3 bg-gray-600 w-4/5 opacity-40 rounded-sm"></div>
+                    <div className="h-3 bg-gray-600 w-2/3 opacity-30 rounded-sm"></div>
+                    <div className="flex gap-2 mt-1">
+                      <div style={{ background: project.accentBar, border: "2px solid rgba(255,255,255,0.2)" }} className="h-7 w-20"></div>
+                      <div className="h-7 w-16 bg-gray-700 border-2 border-gray-500"></div>
+                    </div>
+                  </div>
+                  <div style={{ background: project.langColor, border: "2px solid #000", color: "#000" }} className="absolute bottom-2 right-2 px-2 py-1 font-black text-xs uppercase tracking-widest">
+                    {project.lang}
+                  </div>
+                </div>
+
+                <div className="p-5 flex flex-col flex-1">
+                  <div className="flex flex-wrap gap-2 mb-3">
+                    {project.tags.map((tag) => (
+                      <span key={tag} style={{ background: TAG_COLORS[tag] || "#eee", border: `2px solid ${t.border}`, color: "#000" }} className="font-black text-xs uppercase tracking-widest px-2 py-1">
+                        {tag}
+                      </span>
+                    ))}
+                  </div>
+                  <h3 style={{ color: t.text }} className="font-black text-xl uppercase tracking-tight mb-2">{project.title}</h3>
+                  <p style={{ color: t.textMuted }} className="text-sm font-medium flex-1 mb-4">{project.description}</p>
+                  <a href={project.link} target="_blank" rel="noopener noreferrer"
+                    style={{ background: t.text, color: t.body, border: `4px solid ${t.border}`, boxShadow: `4px 4px 0 0 ${t.shadowYellow}`, transition: "all 0.15s ease" }}
+                    onMouseEnter={e => { e.currentTarget.style.transform = "translate(2px,2px)"; e.currentTarget.style.boxShadow = `2px 2px 0 0 ${t.shadowYellow}`; }}
+                    onMouseLeave={e => { e.currentTarget.style.transform = "none"; e.currentTarget.style.boxShadow = `4px 4px 0 0 ${t.shadowYellow}`; }}
+                    className="flex items-center justify-center gap-2 text-center font-black uppercase tracking-widest text-sm px-4 py-3">
+                    <img src="https://cdn.jsdelivr.net/gh/devicons/devicon/icons/github/github-original.svg" alt="GitHub" className="w-4 h-4" style={{ filter: "invert(1)" }} />
+                    View on GitHub →
+                  </a>
+                </div>
+              </div>
+            </Reveal>
+          ))}
+        </div>
+      </div>
+    </section>
+  );
+}
+
+// ── Contact ───────────────────────────────────────────────────────────
+function ContactSection({ t }) {
+  const formRef = useRef(null);
+  const [form, setForm] = useState({ name: "", email: "", message: "" });
+  // status: "idle" | "sending" | "success" | "error"
+  const [status, setStatus] = useState("idle");
+
+  const handleChange = (e) => setForm({ ...form, [e.target.name]: e.target.value });
+
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    setStatus("sending");
+
+    try {
+      await emailjs.sendForm(
+        EMAILJS_SERVICE_ID,
+        EMAILJS_TEMPLATE_ID,
+        formRef.current,
+        EMAILJS_PUBLIC_KEY
+      );
+      setStatus("success");
+      setForm({ name: "", email: "", message: "" });
+      setTimeout(() => setStatus("idle"), 4000);
+    } catch (err) {
+      console.error("EmailJS error:", err);
+      setStatus("error");
+      setTimeout(() => setStatus("idle"), 4000);
+    }
+  };
+
+  const inputStyle = {
+    background: t.inputBg, border: `4px solid ${t.border}`, color: t.text,
+    boxShadow: `4px 4px 0 0 ${t.shadow}`, outline: "none", width: "100%",
+    padding: "12px 16px", fontWeight: "700", fontSize: "16px", transition: "all 0.15s ease",
+    fontFamily: "inherit",
+  };
+
+  return (
+    <section id="contact" style={{ background: t.contactBg, transition: "background 0.4s ease" }} className="py-20">
+      <div className="max-w-6xl mx-auto px-4">
+        <Reveal direction="left">
+          <div className="mb-12">
+            <div style={{ background: "#F4DF4E", border: `4px solid ${t.border}`, boxShadow: `4px 4px 0 0 ${t.shadow}`, color: "#000" }} className="inline-block px-4 py-2 font-black text-sm uppercase tracking-widest mb-4">
+              Get In Touch
+            </div>
+            <h2 style={{ color: t.text, transition: "color 0.4s ease" }} className="font-black text-5xl md:text-7xl uppercase tracking-tighter">
+              LET'S<br /><span style={{ borderBottom: `8px solid ${t.border}` }}>WORK.</span>
+            </h2>
+          </div>
+        </Reveal>
+
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+          <Reveal direction="left" delay={100}>
+            <div style={{ background: t.card, border: `4px solid ${t.border}`, boxShadow: `12px 12px 0 0 ${t.shadow}`, transition: "all 0.4s ease" }} className="p-8">
+
+              {/* SUCCESS STATE */}
+              {status === "success" && (
+                <div className="flex flex-col items-center justify-center min-h-[300px] text-center">
+                  <div style={{ background: "#A8FF78", border: `4px solid ${t.border}`, boxShadow: `6px 6px 0 0 ${t.shadow}` }} className="p-6 mb-4">
+                    <img src="https://cdn.jsdelivr.net/gh/twitter/twemoji/assets/svg/2705.svg" alt="Success" className="w-16 h-16 mx-auto" />
+                  </div>
+                  <h3 style={{ color: t.text }} className="font-black text-2xl uppercase tracking-tight">Message Sent!</h3>
+                  <p style={{ color: t.textMuted }} className="font-bold mt-2">I'll get back to you within 24 hours.</p>
+                </div>
+              )}
+
+              {/* ERROR STATE */}
+              {status === "error" && (
+                <div className="flex flex-col items-center justify-center min-h-[300px] text-center">
+                  <div style={{ background: "#FF6B6B", border: `4px solid ${t.border}`, boxShadow: `6px 6px 0 0 ${t.shadow}` }} className="p-6 mb-4">
+                    <img src="https://cdn.jsdelivr.net/gh/twitter/twemoji/assets/svg/274c.svg" alt="Error" className="w-16 h-16 mx-auto" />
+                  </div>
+                  <h3 style={{ color: t.text }} className="font-black text-2xl uppercase tracking-tight">Send Failed!</h3>
+                  <p style={{ color: t.textMuted }} className="font-bold mt-2">Something went wrong. Please try again or email directly.</p>
+                </div>
+              )}
+
+              {/* FORM STATE */}
+              {(status === "idle" || status === "sending") && (
+                <form ref={formRef} onSubmit={handleSubmit} className="flex flex-col gap-5">
+                  {[
+                    { label: "Your Name",      name: "name",    type: "text",  placeholder: "John Doe" },
+                    { label: "Email Address",  name: "email",   type: "email", placeholder: "john@example.com" },
+                  ].map((field) => (
+                    <div key={field.name}>
+                      <label style={{ color: t.text }} className="font-black text-xs uppercase tracking-widest block mb-2">{field.label} *</label>
+                      <input
+                        type={field.type} name={field.name} value={form[field.name]}
+                        onChange={handleChange} required placeholder={field.placeholder}
+                        style={inputStyle}
+                        onFocus={e => { e.currentTarget.style.transform = "translate(2px,2px)"; e.currentTarget.style.boxShadow = "none"; }}
+                        onBlur={e => { e.currentTarget.style.transform = "none"; e.currentTarget.style.boxShadow = `4px 4px 0 0 ${t.shadow}`; }}
+                      />
+                    </div>
+                  ))}
+                  <div>
+                    <label style={{ color: t.text }} className="font-black text-xs uppercase tracking-widest block mb-2">Message *</label>
+                    <textarea
+                      name="message" value={form.message} onChange={handleChange}
+                      required rows={5} placeholder="Tell me about your project..."
+                      style={{ ...inputStyle, resize: "none" }}
+                      onFocus={e => { e.currentTarget.style.transform = "translate(2px,2px)"; e.currentTarget.style.boxShadow = "none"; }}
+                      onBlur={e => { e.currentTarget.style.transform = "none"; e.currentTarget.style.boxShadow = `4px 4px 0 0 ${t.shadow}`; }}
+                    />
+                  </div>
+                  <button
+                    type="submit"
+                    disabled={status === "sending"}
+                    style={{ background: t.text, color: t.body, border: `4px solid ${t.border}`, boxShadow: `8px 8px 0 0 ${t.shadowHero}`, transition: "all 0.15s ease", opacity: status === "sending" ? 0.7 : 1, cursor: status === "sending" ? "wait" : "pointer" }}
+                    onMouseEnter={e => { if (status !== "sending") { e.currentTarget.style.transform = "translate(4px,4px)"; e.currentTarget.style.boxShadow = `4px 4px 0 0 ${t.shadowHero}`; }}}
+                    onMouseLeave={e => { e.currentTarget.style.transform = "none"; e.currentTarget.style.boxShadow = `8px 8px 0 0 ${t.shadowHero}`; }}
+                    className="font-black uppercase tracking-widest text-base px-8 py-4">
+                    {status === "sending" ? "Sending..." : "Send Message →"}
+                  </button>
+                </form>
+              )}
+            </div>
+          </Reveal>
+
+          <div className="flex flex-col gap-6">
+            <Reveal direction="right" delay={150}>
+              <div style={{ background: t.text, color: t.body, border: `4px solid ${t.border}`, boxShadow: `12px 12px 0 0 ${t.shadow}`, transition: "all 0.4s ease" }} className="p-8">
+                <h3 className="font-black text-2xl uppercase tracking-tight mb-4">Direct Contact</h3>
+                <div className="flex flex-col gap-3">
+                  {[
+                    { icon: "https://cdn.jsdelivr.net/gh/twitter/twemoji/assets/svg/2709.svg", label: "ahmadikdinal@gmail.com", alt: "Email" },
+                    { icon: "https://cdn.jsdelivr.net/gh/twitter/twemoji/assets/svg/1f4cd.svg", label: "Surabaya, Indonesia — Remote Friendly", alt: "Location" },
+                  ].map((item) => (
+                    <div key={item.label} style={{ borderBottom: "2px solid rgba(255,255,255,0.2)" }} className="flex items-center gap-3 pb-3 last:border-0 last:pb-0">
+                      <div style={{ border: "2px solid currentColor" }} className="w-10 h-10 flex items-center justify-center shrink-0">
+                        <img src={item.icon} alt={item.alt} className="w-5 h-5" />
+                      </div>
+                      <span className="font-bold font-mono text-sm">{item.label}</span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </Reveal>
+
+            <Reveal direction="right" delay={250}>
+              <div style={{ background: t.card, border: `4px solid ${t.border}`, boxShadow: `12px 12px 0 0 ${t.shadow}`, transition: "all 0.4s ease" }} className="p-8">
+                <h3 style={{ color: t.text }} className="font-black text-xl uppercase tracking-tight mb-5">Find Me Online</h3>
+                <div className="flex flex-col gap-4">
+                  {[
+                    { label: "GitHub",   sub: "@loma09 — 9 Repositories", bg: "#24292e", icon: "https://cdn.jsdelivr.net/gh/devicons/devicon/icons/github/github-original.svg",   href: "https://github.com/loma09" },
+                    { label: "LinkedIn", sub: "Ahmad Ikdinal",             bg: "#0077B5", icon: "https://cdn.jsdelivr.net/gh/devicons/devicon/icons/linkedin/linkedin-original.svg", href: "https://www.linkedin.com/in/ahmad-ikdinal-5aa688263/" },
+                  ].map((social) => (
+                    <a key={social.label} href={social.href} target="_blank" rel="noopener noreferrer"
+                      style={{ background: social.bg, border: `4px solid ${t.border}`, boxShadow: `6px 6px 0 0 ${t.shadow}`, transition: "all 0.15s ease" }}
+                      onMouseEnter={e => { e.currentTarget.style.transform = "translate(3px,3px)"; e.currentTarget.style.boxShadow = `3px 3px 0 0 ${t.shadow}`; }}
+                      onMouseLeave={e => { e.currentTarget.style.transform = "none"; e.currentTarget.style.boxShadow = `6px 6px 0 0 ${t.shadow}`; }}
+                      className="flex items-center gap-4 p-4 text-white group">
+                      <div className="w-10 h-10 bg-white border-2 border-white flex items-center justify-center shrink-0">
+                        <img src={social.icon} alt={social.label} className="w-7 h-7" />
+                      </div>
+                      <div>
+                        <p className="font-black uppercase tracking-widest text-sm">{social.label}</p>
+                        <p className="font-mono text-xs text-gray-300">{social.sub}</p>
+                      </div>
+                      <div className="ml-auto font-black text-[#F4DF4E] group-hover:translate-x-1 transition-transform">→</div>
+                    </a>
+                  ))}
+                </div>
+              </div>
+            </Reveal>
+          </div>
+        </div>
+      </div>
+    </section>
+  );
+}
+
+// ── Footer ────────────────────────────────────────────────────────────
+function Footer({ t }) {
+  return (
+    <footer style={{ background: t.footerBg, borderTop: `4px solid ${t.border}`, transition: "all 0.4s ease" }} className="py-8">
+      <div className="max-w-6xl mx-auto px-4 flex flex-col md:flex-row items-center justify-between gap-4">
+        <div style={{ color: t.footerText }} className="font-black font-mono text-lg tracking-tighter">PORTFOLIO.EXE</div>
+        <p style={{ color: t.footerText }} className="font-bold text-sm text-center opacity-70">
+          © {new Date().getFullYear()} Ahmad Ikdinal · Built with React & Tailwind
+        </p>
+        <button onClick={() => window.scrollTo({ top: 0, behavior: "smooth" })}
+          style={{ background: "#F4DF4E", color: "#000", border: `4px solid ${t.border}`, boxShadow: `4px 4px 0 0 #FF6B6B`, transition: "all 0.15s ease" }}
+          onMouseEnter={e => { e.currentTarget.style.transform = "translate(2px,2px)"; e.currentTarget.style.boxShadow = "2px 2px 0 0 #FF6B6B"; }}
+          onMouseLeave={e => { e.currentTarget.style.transform = "none"; e.currentTarget.style.boxShadow = "4px 4px 0 0 #FF6B6B"; }}
+          className="font-black text-sm px-4 py-2 uppercase tracking-widest cursor-pointer">
+          ↑ Back to Top
+        </button>
+      </div>
+    </footer>
+  );
+}
+
+// ── Root ──────────────────────────────────────────────────────────────
+export default function Portfolio() {
+  const [dark, setDark] = useState(false);
+  const [activeSection, setActiveSection] = useState("home");
+  const t = dark ? THEMES.dark : THEMES.light;
+  const toggleDark = useCallback(() => setDark((d) => !d), []);
+
+  useEffect(() => {
+    const saved = localStorage.getItem("portfolio-dark");
+    if (saved === "true") setDark(true);
+  }, []);
+  useEffect(() => {
+    localStorage.setItem("portfolio-dark", dark);
+  }, [dark]);
+
+  useEffect(() => {
+    const sections = ["home", "skills", "projects", "contact"];
+    const observers = sections.map((id) => {
+      const el = document.getElementById(id);
+      if (!el) return null;
+      const obs = new IntersectionObserver(
+        ([entry]) => { if (entry.isIntersecting) setActiveSection(id); },
+        { threshold: 0.35 }
+      );
+      obs.observe(el);
+      return obs;
+    });
+    return () => observers.forEach((o) => o?.disconnect());
+  }, []);
+
+  return (
+    <div style={{ background: t.body, transition: "background 0.4s ease", fontFamily: "'Courier New', Courier, monospace" }}>
+      <Navbar active={activeSection} dark={dark} toggleDark={toggleDark} t={t} />
+      <HeroSection t={t} />
+      <SkillsSection t={t} dark={dark} />
+      <ProjectsSection t={t} />
+      <ContactSection t={t} />
+      <Footer t={t} />
+    </div>
+  );
+}
