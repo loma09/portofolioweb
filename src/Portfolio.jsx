@@ -108,9 +108,9 @@ const THEMES = {
 };
 
 // ── Snake Game ────────────────────────────────────────────────────────
-const CELL = 20;
-const COLS = 20;
-const ROWS = 20;
+const CELL = 24;
+const COLS = 28;
+const ROWS = 24;
 const INIT_SNAKE = [{ x: 10, y: 10 }];
 const INIT_DIR = { x: 1, y: 0 };
 
@@ -496,7 +496,7 @@ function HeroSection({ t }) {
                   className="font-black uppercase tracking-widest text-base px-8 py-4 cursor-pointer flex items-center gap-2">
                   ↓ Download CV
                 </a>
-                <a href="https://github.com/loma09" target="_blank" rel="noopener noreferrer"
+                  <a href="https://github.com/loma09" target="_blank" rel="noopener noreferrer"
                   style={{ background: t.body, color: t.text, border: `4px solid ${t.border}`, boxShadow: `8px 8px 0 0 ${t.shadow}`, transition: "all 0.4s ease" }}
                   onMouseEnter={e => { e.currentTarget.style.transform = "translate(4px,4px)"; e.currentTarget.style.boxShadow = `4px 4px 0 0 ${t.shadow}`; }}
                   onMouseLeave={e => { e.currentTarget.style.transform = "none"; e.currentTarget.style.boxShadow = `8px 8px 0 0 ${t.shadow}`; }}
