@@ -11,3 +11,61 @@ body {
 *::after {
   box-sizing: border-box;
 }
+
+/* ── Float (Hero Photo) ────────────────────── */
+@keyframes float {
+  0%, 100% { transform: translateY(0px); }
+  50%       { transform: translateY(-14px); }
+}
+.float-anim { animation: float 5s ease-in-out infinite; }
+
+/* ── Glitch (Section Titles) ───────────────── */
+@keyframes glitch {
+  0%, 82%, 100% {
+    text-shadow: none;
+    transform: translate(0);
+  }
+  84% {
+    text-shadow: -4px 0 #FF6B6B, 4px 0 #61DAFB;
+    transform: translate(-2px, 1px);
+  }
+  86% {
+    text-shadow: 4px 0 #FF6B6B, -4px 0 #61DAFB;
+    transform: translate(2px, -1px);
+  }
+  88% {
+    text-shadow: -2px 0 #F4DF4E, 2px 0 #FF6B6B;
+    transform: translate(0);
+  }
+  90% {
+    text-shadow: none;
+    transform: translate(0);
+  }
+}
+.glitch-text {
+  display: inline-block;
+  animation: glitch 5s infinite;
+}
+
+/* ── Skill Icon Spin on Hover ──────────────── */
+@keyframes icon-spin {
+  0%   { transform: rotate(0deg) scale(1); }
+  50%  { transform: rotate(180deg) scale(1.2); }
+  100% { transform: rotate(360deg) scale(1); }
+}
+.skill-icon-box:hover img {
+  animation: icon-spin 0.55s ease-out forwards;
+}
+
+/* ── Project Mockup Bars ───────────────────── */
+.mockup-bar {
+  transform-origin: left center;
+  transform: scaleX(0.55);
+  opacity: 0.5;
+  transition: transform 0.5s cubic-bezier(0.16,1,0.3,1),
+              opacity 0.4s ease;
+}
+.project-card:hover .mockup-bar { transform: scaleX(1); opacity: 1; }
+.mockup-bar:nth-child(2) { transition-delay: 0.06s; }
+.mockup-bar:nth-child(3) { transition-delay: 0.12s; }
+.mockup-bar:nth-child(4) { transition-delay: 0.18s; }

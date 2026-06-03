@@ -39,6 +39,33 @@ function Reveal({ children, delay = 0, direction = "up", className = "" }) {
   );
 }
 
+// ── CountUp ───────────────────────────────────────────────────────────
+function CountUp({ value, duration = 1400 }) {
+  const [ref, visible] = useReveal();
+  const [display, setDisplay] = useState("0");
+  const started = useRef(false);
+  useEffect(() => {
+    if (!visible || started.current) return;
+    started.current = true;
+    const str = String(value);
+    const m = str.match(/^([\d.]+)(\+?)$/);
+    if (!m) { setDisplay(value); return; }
+    const end = parseFloat(m[1]);
+    const suffix = m[2] || "";
+    const dec = m[1].includes(".") ? m[1].split(".")[1].length : 0;
+    const t0 = performance.now();
+    const tick = (now) => {
+      const p = Math.min((now - t0) / duration, 1);
+      const ease = 1 - Math.pow(1 - p, 3);
+      setDisplay(parseFloat((end * ease).toFixed(dec)) + suffix);
+      if (p < 1) requestAnimationFrame(tick);
+      else setDisplay(value);
+    };
+    requestAnimationFrame(tick);
+  }, [visible]);
+  return <span ref={ref}>{display}</span>;
+}
+
 const NAV_LINKS = ["Home", "Skills", "Projects", "Game", "Contact"];
 
 const SKILLS = [
@@ -383,7 +410,7 @@ function SnakeGame({ t }) {
               Take A Break
             </div>
             <h2 className="font-black text-5xl md:text-7xl uppercase tracking-tighter" style={{ color: "#F4DF4E" }}>
-              SNAKE<br /><span style={{ color: "#FF6B6B" }}>GAME_</span>
+              SNAKE<br /><span style={{ color: "#FF6B6B" }} className="glitch-text">GAME_</span>
             </h2>
           </div>
         </Reveal>
@@ -721,7 +748,7 @@ function HeroSection({ t }) {
 
           <Reveal direction="right" delay={200}>
             <div className="relative flex justify-center lg:justify-end">
-              <div className="relative w-72 h-72 md:w-96 md:h-96">
+              <div className="relative w-72 h-72 md:w-96 md:h-96 float-anim">
                 <div style={{ background: "#FF6B6B", border: `4px solid ${t.border}`, boxShadow: `12px 12px 0 0 ${t.shadow}` }} className="absolute inset-0 translate-x-4 translate-y-4"></div>
                 <div style={{ background: "#61DAFB", border: `4px solid ${t.border}`, boxShadow: `12px 12px 0 0 ${t.shadow}` }} className="absolute inset-0 translate-x-2 translate-y-2"></div>
                 <div style={{ background: t.card, border: `4px solid ${t.border}`, boxShadow: `12px 12px 0 0 ${t.shadow}`, transition: "all 0.4s ease" }} className="relative w-full h-full overflow-hidden">
@@ -744,7 +771,7 @@ function HeroSection({ t }) {
           ].map((s, i) => (
             <Reveal key={s.label} direction="up" delay={i * 80}>
               <div style={{ background: t.card, border: `4px solid ${t.border}`, boxShadow: `6px 6px 0 0 ${t.shadow}`, transition: "all 0.4s ease" }} className="p-4 text-center">
-                <p style={{ color: t.text }} className="font-black text-3xl">{s.num}</p>
+                <p style={{ color: t.text }} className="font-black text-3xl"><CountUp value={s.num} /></p>
                 <p style={{ color: t.textMuted }} className="font-bold text-sm uppercase tracking-widest">{s.label}</p>
               </div>
             </Reveal>
@@ -765,7 +792,7 @@ function SkillsSection({ t, dark }) {
               What I Work With
             </div>
             <h2 style={{ color: t.skillsText }} className="font-black text-5xl md:text-7xl uppercase tracking-tighter">
-              CORE<br /><span style={{ color: "#F4DF4E" }}>SKILLS_</span>
+              CORE<br /><span style={{ color: "#F4DF4E" }} className="glitch-text">SKILLS_</span>
             </h2>
           </div>
         </Reveal>
@@ -778,7 +805,7 @@ function SkillsSection({ t, dark }) {
                 onMouseLeave={e => { e.currentTarget.style.transform = "none"; e.currentTarget.style.boxShadow = `8px 8px 0 0 ${dark ? "rgba(244,223,78,0.5)" : "rgba(244,223,78,0.8)"}`; }}
                 className="p-6 group">
                 <div className="flex items-start justify-between mb-4">
-                  <div style={{ background: "#fff", border: `4px solid #000`, boxShadow: `4px 4px 0 0 #000` }} className="w-14 h-14 flex items-center justify-center shrink-0">
+                  <div style={{ background: "#fff", border: `4px solid #000`, boxShadow: `4px 4px 0 0 #000` }} className="skill-icon-box w-14 h-14 flex items-center justify-center shrink-0">
                     <img src={skill.icon} alt={skill.name} className="w-8 h-8 object-contain" />
                   </div>
                   <span className="font-black text-4xl text-black opacity-20 font-mono">{String(i + 1).padStart(2, "0")}</span>
@@ -805,7 +832,7 @@ function ProjectsSection({ t }) {
             </div>
             <h2 style={{ color: t.text, transition: "color 0.4s ease" }} className="font-black text-5xl md:text-7xl uppercase tracking-tighter">
               SELECTED<br />
-              <span style={{ background: t.text, color: t.body, transition: "all 0.4s ease" }} className="px-2 inline-block">PROJECTS</span>
+              <span style={{ background: t.text, color: t.body, transition: "all 0.4s ease" }} className="glitch-text px-2 inline-block">PROJECTS</span>
             </h2>
           </div>
         </Reveal>
@@ -823,7 +850,7 @@ function ProjectsSection({ t }) {
                 style={{ background: t.card, border: `4px solid ${t.border}`, boxShadow: `8px 8px 0 0 ${t.shadow}`, transition: "all 0.15s ease" }}
                 onMouseEnter={e => { e.currentTarget.style.transform = "translate(4px,4px)"; e.currentTarget.style.boxShadow = `4px 4px 0 0 ${t.shadow}`; }}
                 onMouseLeave={e => { e.currentTarget.style.transform = "none"; e.currentTarget.style.boxShadow = `8px 8px 0 0 ${t.shadow}`; }}
-                className="flex flex-col h-full">
+                className="project-card flex flex-col h-full">
                 <div style={{ background: project.mockupBg, borderBottom: `4px solid ${t.border}` }} className="h-44 relative overflow-hidden">
                   <div className="absolute top-0 left-0 right-0 h-8 bg-[#2a2a2a] flex items-center px-3 gap-2" style={{ borderBottom: "2px solid #000" }}>
                     <div className="w-3 h-3 rounded-full bg-[#FF5F56] border border-black"></div>
@@ -834,12 +861,12 @@ function ProjectsSection({ t }) {
                     </div>
                   </div>
                   <div className="absolute top-10 left-0 right-0 bottom-0 p-3 flex flex-col gap-2">
-                    <div style={{ background: project.accentBar, border: "2px solid rgba(255,255,255,0.2)" }} className="h-6 w-3/4"></div>
-                    <div className="h-3 bg-gray-600 w-full opacity-50 rounded-sm"></div>
-                    <div className="h-3 bg-gray-600 w-4/5 opacity-40 rounded-sm"></div>
-                    <div className="h-3 bg-gray-600 w-2/3 opacity-30 rounded-sm"></div>
+                    <div style={{ background: project.accentBar, border: "2px solid rgba(255,255,255,0.2)" }} className="mockup-bar h-6 w-3/4"></div>
+                    <div className="mockup-bar h-3 bg-gray-600 w-full opacity-50 rounded-sm"></div>
+                    <div className="mockup-bar h-3 bg-gray-600 w-4/5 opacity-40 rounded-sm"></div>
+                    <div className="mockup-bar h-3 bg-gray-600 w-2/3 opacity-30 rounded-sm"></div>
                     <div className="flex gap-2 mt-1">
-                      <div style={{ background: project.accentBar, border: "2px solid rgba(255,255,255,0.2)" }} className="h-7 w-20"></div>
+                      <div style={{ background: project.accentBar, border: "2px solid rgba(255,255,255,0.2)" }} className="mockup-bar h-7 w-20"></div>
                       <div className="h-7 w-16 bg-gray-700 border-2 border-gray-500"></div>
                     </div>
                   </div>
@@ -908,7 +935,7 @@ function ContactSection({ t }) {
               Get In Touch
             </div>
             <h2 style={{ color: t.text, transition: "color 0.4s ease" }} className="font-black text-5xl md:text-7xl uppercase tracking-tighter">
-              LET'S<br /><span style={{ borderBottom: `8px solid ${t.border}` }}>WORK.</span>
+              LET'S<br /><span style={{ borderBottom: `8px solid ${t.border}` }} className="glitch-text">WORK.</span>
             </h2>
           </div>
         </Reveal>
