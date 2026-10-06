@@ -535,7 +535,7 @@ function LoadingScreen({ onDone }) {
         clearInterval(interval);
         setTimeout(() => {
           setFadeOut(true);
-          setTimeout(() => onDone(), 600);
+          setTimeout(() => onDone(), 800);
         }, 400);
       }
     }, 300);
@@ -625,7 +625,7 @@ function Navbar({ active, dark, toggleDark, t }) {
             onMouseEnter={e => { e.currentTarget.style.transform = "translate(2px,2px)"; e.currentTarget.style.boxShadow = "none"; }}
             onMouseLeave={e => { e.currentTarget.style.transform = "none"; e.currentTarget.style.boxShadow = `4px 4px 0 0 ${t.shadow}`; }}
             className="font-black text-sm px-4 py-2 cursor-pointer uppercase tracking-widest ml-2">
-            {dark ? "☀ LIGHT" : "☾ DARK"}
+            {dark ? "☀" : "☾"}
           </button>
         </div>
         <div className="md:hidden flex items-center gap-2">
@@ -766,7 +766,7 @@ function HeroSection({ t }) {
           {[
             { num: "9+", label: "Repositories" },
             { num: "6", label: "Core Skills" },
-            { num: "3.89", label: "GPA" },
+            { num: "3.92", label: "GPA" },
             { num: "Open", label: "To Hire" },
           ].map((s, i) => (
             <Reveal key={s.label} direction="up" delay={i * 80}>
@@ -827,21 +827,12 @@ function ProjectsSection({ t }) {
       <div className="max-w-6xl mx-auto px-4">
         <Reveal direction="left">
           <div className="mb-4">
-            <div style={{ background: t.text, color: t.body, border: `4px solid ${t.border}`, boxShadow: `4px 4px 0 0 #FF6B6B`, transition: "all 0.4s ease" }} className="inline-block px-4 py-2 font-black text-sm uppercase tracking-widest mb-4">
-              Real GitHub Projects
-            </div>
             <h2 style={{ color: t.text, transition: "color 0.4s ease" }} className="font-black text-5xl md:text-7xl uppercase tracking-tighter">
-              SELECTED<br />
               <span style={{ background: t.text, color: t.body, transition: "all 0.4s ease" }} className="glitch-text px-2 inline-block">PROJECTS</span>
             </h2>
           </div>
         </Reveal>
         <Reveal direction="left" delay={80}>
-          <a href="https://github.com/loma09" target="_blank" rel="noopener noreferrer"
-            style={{ color: t.textMuted, borderBottom: `2px solid ${t.border}`, transition: "color 0.4s" }}
-            className="inline-block font-bold font-mono text-sm mb-10 hover:opacity-70">
-            github.com/loma09
-          </a>
         </Reveal>
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
           {PROJECTS.map((project, i) => (
@@ -1048,7 +1039,7 @@ function Footer({ t }) {
       <div className="max-w-6xl mx-auto px-4 flex flex-col md:flex-row items-center justify-between gap-4">
         <div style={{ color: t.footerText }} className="font-black font-mono text-lg tracking-tighter">PORTFOLIO.EXE</div>
         <p style={{ color: t.footerText }} className="font-bold text-sm text-center opacity-70">
-          © {new Date().getFullYear()} Ahmad Ikdinal · Built with React & Tailwind
+          © {new Date().getFullYear()} Ahmad Ikdinal · All rights reserved
         </p>
         <button onClick={() => window.scrollTo({ top: 0, behavior: "smooth" })}
           style={{ background: "#F4DF4E", color: "#000", border: `4px solid ${t.border}`, boxShadow: `4px 4px 0 0 #FF6B6B`, transition: "all 0.15s ease" }}
